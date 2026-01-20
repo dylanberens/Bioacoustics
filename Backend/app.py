@@ -1,302 +1,209 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
 import os
+import io
+import base64
+import subprocess
+import tempfile
+import torch
+import torch.nn as nn
 import numpy as np
 import librosa
 import librosa.display
-import matplotlib
-matplotlib.use('Agg')  # Use non-interactive backend
-import matplotlib.pyplot as plt
-import base64
-import io
 import cv2
-import pandas as pd
-from werkzeug.utils import secure_filename
-import tempfile
-import logging
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import plotly.figure_factory as ff
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from transformers import ASTConfig, ASTForAudioClassification, ASTFeatureExtractor
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
+# initialize flask app
 app = Flask(__name__)
-CORS(app)
+CORS(app) # enable CORS for frontend communication
 
-# Configuration
-app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max file size
-UPLOAD_FOLDER = 'temp_uploads'
-ALLOWED_EXTENSIONS = {'wav', 'mp3', 'flac', 'm4a', 'ogg'}
+# === 1. CONFIGURATION ===
+# docker container wont have GPU usually, defaulting to cpu is safe
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+CHECKPOINT_PATH = "checkpoints/best_ast_model.pth"
+PRETRAINED_MODEL = "MIT/ast-finetuned-audioset-10-10-0.4593"
+SAMPLE_RATE = 16000
+CHUNK_DURATION = 10.24
+MAX_TOTAL_DURATION = int(SAMPLE_RATE * DURATION)
 
-# Create upload folder if it doesn't exist
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+# === 2. MODEL DEF & VIZ LOGIC ===
+class BioAcousticAST(nn.Module):
+  def __init__(self, pretrained_model_name):
+    super(BioAcousticAST, self).__init__()
 
-# Global variables for model (will be loaded when available)
-model = None
-feature_extractor = None
-min_adi = None
-max_adi = None
+    # pretrained body
+    self.ast = ASTForAudioClassification.from_pretrained(
+        pretrained_model_name,
+        ignore_mismatched_sizes=True
+    )
 
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    # custom regression head
+    hidden_size = self.ast.config.hidden_size
+    self.classifier = nn.Sequential(
+        nn.LayerNorm(hidden_size),
+        nn.Linear(hidden_size, 256),
+        nn.GELU(),
+        nn.Dropout(0.35),
+        nn.Linear(256, 1),
+        nn.Sigmoid()
+    )
 
-def calculate_adi(audio, sr, n_fft=2048, hop_length=512):
-    """Calculate Acoustic Diversity Index (ADI) from audio"""
-    try:
-        # Simple ADI calculation for demo purposes
-        # In production, you'd use the maad library as in the notebook
-        
-        # Calculate spectrogram
-        stft = librosa.stft(audio, n_fft=n_fft, hop_length=hop_length)
-        magnitude = np.abs(stft)
-        
-        # Focus on biophony frequency range (2kHz-11kHz)
-        freqs = librosa.fft_frequencies(sr=sr, n_fft=n_fft)
-        freq_mask = (freqs >= 2000) & (freqs <= 11000)
-        
-        if np.sum(freq_mask) == 0:
-            return 0.0
-            
-        # Calculate diversity across frequency bands
-        biophony_spec = magnitude[freq_mask, :]
-        
-        # Divide into bands and calculate diversity
-        n_bands = 10
-        band_size = biophony_spec.shape[0] // n_bands
-        
-        if band_size == 0:
-            return 0.0
-            
-        diversities = []
-        for i in range(n_bands):
-            start_idx = i * band_size
-            end_idx = min((i + 1) * band_size, biophony_spec.shape[0])
-            band_energy = np.mean(biophony_spec[start_idx:end_idx, :])
-            if band_energy > 0:
-                diversities.append(band_energy)
-        
-        if len(diversities) == 0:
-            return 0.0
-            
-        # Calculate diversity using Shannon-like index
-        diversities = np.array(diversities)
-        diversities = diversities / np.sum(diversities) if np.sum(diversities) > 0 else diversities
-        
-        # Avoid log(0)
-        diversities = diversities[diversities > 0]
-        if len(diversities) == 0:
-            return 0.0
-            
-        adi = -np.sum(diversities * np.log(diversities))
-        
-        # Normalize to 0-1 range
-        max_possible_adi = np.log(n_bands)
-        normalized_adi = adi / max_possible_adi if max_possible_adi > 0 else 0.0
-        
-        return float(np.clip(normalized_adi, 0.0, 1.0))
-        
-    except Exception as e:
-        logger.error(f"Error calculating ADI: {e}")
-        return 0.0
+  def forward(self, input_values):
+    outputs = self.ast.base_model(input_values)
+    last_hidden_state = outputs.last_hidden_state
+    cls_token = last_hidden_state[:, 0, :]
+    prediction = self.classifier(cls_token)
+    return prediction
 
-def create_spectrogram_plot(audio, sr, biodiversity_score, true_score=None):
-    """Create matplotlib spectrogram plot and return as base64"""
-    try:
-        # Create mel spectrogram
-        mel_spec = librosa.feature.melspectrogram(
-            y=audio, sr=sr, n_fft=2048, hop_length=512, n_mels=224
-        )
-        log_mel_spec = librosa.power_to_db(mel_spec, ref=np.max)
-        
-        # Create plot
-        fig, ax = plt.subplots(figsize=(12, 6))
-        
-        librosa.display.specshow(
-            log_mel_spec, 
-            sr=sr, 
-            x_axis='time', 
-            y_axis='mel', 
-            fmax=8000,
-            ax=ax,
-            cmap='viridis'
-        )
-        
-        plt.colorbar(ax.collections[0], ax=ax, format='%+2.0f dB')
-        
-        title = f'Audio Spectrogram - Predicted Biodiversity Score: {biodiversity_score:.3f}'
-        if true_score is not None:
-            title += f' (Calculated ADI: {true_score:.3f})'
-        
-        ax.set_title(title, fontsize=14)
-        ax.set_xlabel('Time (s)')
-        ax.set_ylabel('Frequency (Hz)')
-        
-        # Save plot to base64
-        buf = io.BytesIO()
-        plt.savefig(buf, format='png', bbox_inches='tight', dpi=150)
-        plt.close(fig)
-        
-        buf.seek(0)
-        img_b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
-        
-        return img_b64
-        
-    except Exception as e:
-        logger.error(f"Error creating spectrogram plot: {e}")
-        return None
+def generate_attention_rollout(model, input_values):
+  model.eval()
+  with torch.no_grad():
+    _, attentions = model(input_values, output_attentions=True)
 
-def get_benchmark_data():
-    """Get benchmark data for comparison"""
-    # These would come from your trained model's calibration data
-    # For now, using example values
-    benchmarks = {
-        'urban_low': 0.1,
-        'urban_park': 0.3,
-        'forest_edge': 0.5,
-        'primary_forest': 0.8,
-        'pristine_ecosystem': 0.95
-    }
+    seq_len = attentions[0].shape[-1]
+    rollout = torch.eye(seq_len).to(DEVICE)
+    for layer_attention in attentions:
+      avg_head_map = layer_attention.mean(dim=1)[0]
+      a_map = avg_head_map + torch.eye(seq_len).to(DEVICE)
+      a_map = a_map / a_map.sum(dim=-1, keepdim=True)
+      rollout = torch.matmul(rollout, a_map)
     
-    return benchmarks
+    cls_attention = rollout[0, 2:]
+    grid_h = 12
+    grid_w = cls_attention.shape[0] // grid_h
+    heatmap = cls_attention[:grid_h*grid_w].reshape(grid_h, grid_w)
 
-def create_distribution_data(user_score, benchmarks):
-    """Create data for Plotly distribution plot"""
+    heatmap = (heatmap - heatmap.min()) / (heatmap.max() - heatmap.min() + 1e-8)
+    return (heatmap.cpu().numpy() * 255).astype(np.uint8)
+  
+def get_distribution_json(user_score, all_scores):
+  # 1. generate heatmap bins
+  counts, bin_edges = np.histogram(all_scores, bins=20, range=(0, 1))
+  bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+
+  # 2 hardcoded benchmarks (belong in config file later)
+  benchmarks = [
+    {"name": "Amazon Rainforest Avg", "value": 0.82},
+    {"name": "Urban Park", "value": 0.45},
+    {"name": "City Avg", "value": 0.25}
+  ]
+
+  return {
+    "histogram": {
+      "x": bin_centers.tolist(),
+      "y": counts.tolist()
+    },
+    "user_score": {
+      "x": [user_score, user_score],
+      "y": [0, int(np.max(counts))]
+    },
+    "benchmarks": [
+      {
+        "x": [b["value"], b["value"]],
+        "y": [0, int(np.max(counts))],
+        "name": b["name"]
+      } for b in benchmarks
+    ]
+  }
+
+# ===== 3. PREDICTION PIPELINE =====
+def run_full_analysis(file_path, model, feature_extractor):
+  audio_full, sr = librosa.load(file_path, sr=SAMPLE_RATE, duration=MAX_TOTAL_DURATION)
+  samples_per_chunk = int(SAMPLE_RATE * CHUNK_DURATION)
+
+  chunk_scores = []
+  heatmaps = []
+  # sliding window (non-overlapping for speed)
+  for start in range(0, len(audio_full) - samples_per_chunk + 1, samples_per_chunk):
+    chunk = audio_full[start : start + samples_per_chunk]
+    inputs = feature_extractor(chunk, sampling_rate=SAMPLE_RATE, return_tensor="pt")
+    input_values = input['input_values'].to(DEVICE)
     
-    # Create sample distribution (in reality, this would come from your training data)
-    np.random.seed(42)  # For consistent results
-    
-    # Simulate score distribution
-    n_samples = 1000
-    distribution_scores = []
-    
-    # Add benchmark concentrations
-    for label, score in benchmarks.items():
-        # Add some samples around each benchmark
-        samples = np.random.normal(score, 0.05, n_samples // len(benchmarks))
-        samples = np.clip(samples, 0, 1)
-        distribution_scores.extend(samples)
-    
-    # Add some random samples for realistic distribution
-    random_samples = np.random.beta(2, 2, n_samples // 2)  # Beta distribution for realistic shape
-    distribution_scores.extend(random_samples)
-    
-    distribution_scores = np.array(distribution_scores)
-    
-    # Create histogram data
-    hist_counts, hist_bins = np.histogram(distribution_scores, bins=50)
-    bin_centers = (hist_bins[:-1] + hist_bins[1:]) / 2
-    
-    plot_data = {
-        'histogram': {
-            'x': bin_centers.tolist(),
-            'y': hist_counts.tolist(),
-            'type': 'bar',
-            'name': 'Score Distribution'
-        },
-        'user_score': {
-            'x': [user_score, user_score],
-            'y': [0, max(hist_counts)],
-            'type': 'line',
-            'name': 'Your Recording',
-            'line': {'color': 'red', 'width': 3}
-        },
-        'benchmarks': [
-            {
-                'x': [score, score],
-                'y': [0, max(hist_counts) * 0.8],
-                'type': 'line',
-                'name': label.replace('_', ' ').title(),
-                'line': {'dash': 'dash', 'width': 2}
-            }
-            for label, score in benchmarks.items()
-        ]
-    }
-    
-    return plot_data
+    with torch.no_grad():
+      pred, _ = model(input_values)
+      score = pred.item()
+      raw_heatmap = generate_attention_rollout(model, input_values)
+
+    chunk_scores.append(score)
+    heatmaps.append(raw_heatmap * score)
+
+  final_score = np.mean(sorted(chunk_scores, reverse=True)[:3]) if chunk_scores else 0.0
+
+  # stitch heatmaps
+  full_heatmap = np.concatenate(heatmaps, axis=1) if heatmaps else np.zeros((12, 100))
+
+  # generate plots (spectrogram & heatmap overlay)
+  spec = librosa.feature.melspectrogram(y=audio_full, sr=SAMPLE_RATE, fmax=8000)
+  spec_db = librosa.power_to_db(spec, ref=np.max)
+
+  # 1. Base spectrogram
+  fig, ax = plt.subplots(figsize=(12, 3))
+  librosa.display.specshow(spec_db, sr=SAMPLE_RATE, x_axis='time', y_axis='mel', fmax=8000, ax=ax, camp='magma')
+  buf = io.BytesIO()
+  plt.savefig(buf, format='png', bbox_inches='tight')
+  spec_b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+  plt.close()
+
+  # 2. heatmap overlay
+  fig, ax = plt.subplots(figsize=(12, 3))
+  librosa.display.specshow(spec_db, sr=SAMPLE_RATE, x_axis='time', y_axis='mel', fmax=8000, ax=ax, camp='gray')
+  heatmap_resized = cv2.resize(full_heatmap, (spec_db.shape[1], spec_db.shape[0]))
+  ax.imshow(heatmap_resized, cmap='jet', alpha=0.5, aspect='auto', extent=[0, len(audio_full)/sr, 0, 8000], origin='lower')
+  buf = io.BytesIO()
+  plt.savefig(buf, format='png', bbox_inches='tight')
+  heat_b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+  plt.close()
+
+  return final_score, spec_b64, heat_b64, len(audio_full)/sr
 
 @app.route('/analyze', methods=['POST'])
-def analyze_audio():
-    """Main endpoint to analyze uploaded audio file"""
-    try:
-        # Check if file is present
-        if 'audio' not in request.files:
-            return jsonify({'error': 'No audio file provided'}), 400
-        
-        file = request.files['audio']
-        
-        if file.filename == '':
-            return jsonify({'error': 'No file selected'}), 400
-        
-        if not allowed_file(file.filename):
-            return jsonify({'error': 'Invalid file type. Allowed types: ' + ', '.join(ALLOWED_EXTENSIONS)}), 400
-        
-        # Save file temporarily
-        filename = secure_filename(file.filename)
-        temp_path = os.path.join(UPLOAD_FOLDER, filename)
-        file.save(temp_path)
-        
-        try:
-            # Load audio
-            logger.info(f"Loading audio file: {filename}")
-            audio, sr = librosa.load(temp_path, sr=16000, duration=60)  # Limit to 60 seconds
-            
-            # Calculate ADI score
-            logger.info("Calculating ADI score...")
-            adi_score = calculate_adi(audio, sr)
-            
-            # For now, use ADI as biodiversity score (in production, use your trained model)
-            biodiversity_score = adi_score
-            
-            # Create spectrogram plot
-            logger.info("Creating spectrogram plot...")
-            spectrogram_b64 = create_spectrogram_plot(audio, sr, biodiversity_score, adi_score)
-            
-            # Get benchmark data
-            benchmarks = get_benchmark_data()
-            
-            # Create distribution plot data
-            logger.info("Creating distribution data...")
-            distribution_data = create_distribution_data(biodiversity_score, benchmarks)
-            
-            # Prepare response
-            response = {
-                'biodiversity_score': float(biodiversity_score),
-                'adi_score': float(adi_score),
-                'spectrogram_b64': spectrogram_b64,
-                'distribution_data': distribution_data,
-                'benchmarks': benchmarks,
-                'filename': filename,
-                'duration': len(audio) / sr,
-                'sample_rate': sr
-            }
-            
-            logger.info(f"Analysis complete. Score: {biodiversity_score:.3f}")
-            return jsonify(response)
-            
-        finally:
-            # Clean up temp file
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
-                
-    except Exception as e:
-        logger.error(f"Error analyzing audio: {e}")
-        return jsonify({'error': f'Analysis failed: {str(e)}'}), 500
+def analyze():
 
-@app.route('/health', methods=['GET'])
-def health_check():
-    """Health check endpoint"""
-    return jsonify({'status': 'healthy', 'message': 'Biodiversity Analysis API is running'})
+  if 'audio' not in request.files: return jsonify({"error": "No audio"}), 400
+  file = request.files['audio']
 
-@app.route('/', methods=['GET'])
-def root():
-    """Root endpoint"""
+  with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+    file.save(tmp.name)
+    input_path = tmp.name
+  
+  processed_path = input_path + "_converted.wav"
+
+  try:
+    # TRIMMING & CONVERTING W/ FFMEG (solves format & duration issues)
+    subprocess.run([
+      "ffmpeg", "-y", "-i", input_path,
+      "-t", str(MAX_TOTAL_DURATION),
+      "-ar", str(SAMPLE_RATE), "-ac", "1",
+      processed_path
+    ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    score, spec_b64, heat_b64, duration = run_full_analysis(processed_path, model, feature_extractor)
+
+    dist_json = get_distribution_json(score, all_normalized_scores)
+
     return jsonify({
-        'message': 'Biodiversity Analysis API',
-        'endpoints': {
-            '/analyze': 'POST - Upload audio file for analysis',
-            '/health': 'GET - Health check'
-        }
+        "biodiversity_score": score,
+        "spectrogram_b64": spec_b64,
+        "gradcam_b64": heat_b64, # named gradcam just to amtch Frontend
+        "distribution_data": dist_json,
+        "duration": round(duration, 2),
+        "status": "success"
     })
+  finally:
+    for p in [input_path, processed_path]:
+      if os.path.exists(p):
+        os.remove(p)
+
+print("Loading Audio Spectrogram Transformer (AST) . . .")
+feature_extractor = ASTFeatureExtractor.from_pretrained(PRETRAINED_MODEL)
+model = BioAcousticAST(PRETRAINED_MODEL).to(DEVICE)
+if os.path.exists(CHECKPOINT_PATH):
+  model.load_state_dict(torch.load(CHECKPOINT_PATH, map_location=DEVICE))
+model.eval()
 
 if __name__ == '__main__':
-    logger.info("Starting Biodiversity Analysis API...")
-    app.run(debug=True, host='0.0.0.0', port=5000)
+  app.run(host='0.0.0.0', port=5000)

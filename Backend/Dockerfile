@@ -31,4 +31,4 @@ EXPOSE 5000
 
 # 9. the command to run when the container starts
 # use 'gunicorn' (production server) instead of python app.py (dev server)
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--timeout", "120", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--timeout", "180", "app:app"]
