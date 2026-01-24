@@ -57,13 +57,13 @@ const teamMembers = [
   {
     name: "Dylan Berens",
     role: "Machine Learning Engineer",
-    description: "Specializes in machine learning algorithms for bioacoustic analysis and neural network architecture design.",
-    skills: ["Python", "TensorFlow", "Signal Processing", "Deep Learning"]
+    description: "Hi, I'm Dylan. I specialize in Machine Learning, I enjoy long distance swimming, and I handled the backend & Docker containerization for our project.",
+    skills: ["TensorFlow", "Transfer Learning", "Docker", "Vision Transformers (ViTs)"]
   },
   {
     name: "Shruthi Yenamagandla", 
     role: "CNN Architect",
-    description: "Focuses on the implementation of the CNN model for the bioacoustics analysis.",
+    description: "Focuses on the implementation of the baseline CNN model for the bioacoustics analysis.",
     skills: ["Python", "TensorFlow/Keras", "Librosa", "Google Colab"]
   },
   {

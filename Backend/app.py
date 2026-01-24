@@ -130,7 +130,11 @@ def run_full_analysis(file_path, model, feature_extractor):
     input_values = inputs['input_values'].to(DEVICE)
     
     with torch.no_grad():
-      pred, _ = model(input_values)
+      #pred, _ = model(input_values)
+      # altered safe handling in case mismatch in unpack
+      outputs = model(input_values)
+      pred = outputs.logits if hasattr(outputs, 'logits') else outputs
+      
       score = pred.item()
       raw_heatmap = generate_attention_rollout(model, input_values)
 
