@@ -9,7 +9,7 @@ let USE_COLAB = false; // Using Colab server
 // Create axios instance with default config
 const api = axios.create({
   baseURL: API_BASE_URL, // Now defaults to Colab URL
-  timeout: 120000, // 2 minutes timeout for analysis
+  timeout: 300000, // 5 minutes timeout for analysis
   headers: {
     'Content-Type': 'multipart/form-data',
   },

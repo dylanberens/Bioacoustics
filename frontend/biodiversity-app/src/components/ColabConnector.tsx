@@ -8,7 +8,7 @@ interface ColabConnectorProps {
 
 const ColabConnector: React.FC<ColabConnectorProps> = ({ onConnectionChange }) => {
   const [isConnected, setIsConnected] = useState(false);
-  const [isColab] = useState(true); // Always true for this component
+  const [isColab] = useState(biodiversityApi.getCurrentConfig().isColab); // No longer using directly from Colab
   const [status, setStatus] = useState('Connecting to Colab...');
   const [isLoading, setIsLoading] = useState(false);
 
