@@ -4,7 +4,7 @@ import axios from 'axios';
 // Backend API configuration - Using Google Colab with ngrok
 // new api url added by Dylan for Google Cloud backend
 let API_BASE_URL = 'https://bioacoustics-api-647065528622.us-central1.run.app'; // Google Colab server via ngrok
-let USE_COLAB = true; // Using Colab server
+let USE_COLAB = false; // Using Colab server
 
 // Create axios instance with default config
 const api = axios.create({

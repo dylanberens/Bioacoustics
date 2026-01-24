@@ -20,6 +20,7 @@
     "framer-motion": "^12.23.24",
     "lucide-react": "^0.552.0",
     "plotly.js-dist": "^3.2.0",
+    "plotly.js-dist-min": "^3.3.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-dropzone": "^14.3.8",
