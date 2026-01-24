@@ -30,6 +30,9 @@ SAMPLE_RATE = 16000
 CHUNK_DURATION = 10.24
 MAX_TOTAL_DURATION = int(SAMPLE_RATE * DURATION)
 
+BASLINE_HISTOGRAM_Y = [3, 2, 1, 1, 2, 4, 8, 12, 18, 24, 32, 55, 75, 95, 115, 122, 105, 92, 85, 68]
+BIN_CENTERS = np.linspace(0.025, 0.975, 20).tolist()
+
 # === 2. MODEL DEF & VIZ LOGIC ===
 class BioAcousticAST(nn.Module):
   def __init__(self, pretrained_model_name):
@@ -81,16 +84,8 @@ def generate_attention_rollout(model, input_values):
     return (heatmap.cpu().numpy() * 255).astype(np.uint8)
   
 def get_distribution_json(user_score, all_scores):
-  # 1. generate heatmap bins
-  counts, bin_edges = np.histogram(all_scores, bins=20, range=(0, 1))
-  bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-
-  # 2 hardcoded benchmarks (belong in config file later)
-  benchmarks = [
-    {"name": "Amazon Rainforest Avg", "value": 0.82},
-    {"name": "Urban Park", "value": 0.45},
-    {"name": "City Avg", "value": 0.25}
-  ]
+  
+  max_y = max(BASELINE_HISTOGRAM_Y)
 
   return {
     "histogram": {
@@ -103,10 +98,21 @@ def get_distribution_json(user_score, all_scores):
     },
     "benchmarks": [
       {
-        "x": [b["value"], b["value"]],
-        "y": [0, int(np.max(counts))],
-        "name": b["name"]
-      } for b in benchmarks
+        "name": "Amazon Basin Avg",
+        "x": [0.82, 0.82],
+        "y": [0, max_y],
+        "type": "scatter",
+        "mode": "lines",
+        "line": {"dash": "dash", "width": 2}
+      },
+      {
+        "name": "City Park (Houston)",
+        "x": [0.45, 0.45],
+        "y": [0, max_y],
+        "type": "scatter",
+        "mode": "lines",
+        "line": {"dash": "dash", "width": 2}
+      }
     ]
   }
 

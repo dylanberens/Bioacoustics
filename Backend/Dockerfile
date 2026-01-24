@@ -19,9 +19,9 @@ COPY requirements.txt .
 # 6. install python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY download_base_model.py .
+COPY download_models.py .
 
-RUN python download_base_model.py
+RUN python download_models.py
 
 # 7. copy the rest of backend code (including your saved model)
 COPY . .
@@ -29,6 +29,8 @@ COPY . .
 # 8. expose the port Flask runs on
 EXPOSE 5000
 
-# 9. the command to run when the container starts
+# 9. Start Gunicorn
+# cloud run injects a PORT environment variable (usually 8080),
+# but this configured for 5000. This maps in the deploy command
 # use 'gunicorn' (production server) instead of python app.py (dev server)
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--timeout", "180", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--timeout", "120", "--workers", "1", "app:app"]
