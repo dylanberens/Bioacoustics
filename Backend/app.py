@@ -28,9 +28,9 @@ CHECKPOINT_PATH = "checkpoints/best_ast_model.pth"
 PRETRAINED_MODEL = "MIT/ast-finetuned-audioset-10-10-0.4593"
 SAMPLE_RATE = 16000
 CHUNK_DURATION = 10.24
-MAX_TOTAL_DURATION = int(SAMPLE_RATE * DURATION)
+MAX_TOTAL_DURATION_SECONDS = 60.0
 
-BASLINE_HISTOGRAM_Y = [3, 2, 1, 1, 2, 4, 8, 12, 18, 24, 32, 55, 75, 95, 115, 122, 105, 92, 85, 68]
+BASELINE_HISTOGRAM_Y = [3, 2, 1, 1, 2, 4, 8, 12, 18, 24, 32, 55, 75, 95, 115, 122, 105, 92, 85, 68]
 BIN_CENTERS = np.linspace(0.025, 0.975, 20).tolist()
 
 # === 2. MODEL DEF & VIZ LOGIC ===
@@ -89,12 +89,12 @@ def get_distribution_json(user_score, all_scores):
 
   return {
     "histogram": {
-      "x": bin_centers.tolist(),
-      "y": counts.tolist()
+      "x": BIN_CENTERS,
+      "y": BASELINE_HISTOGRAM_Y
     },
     "user_score": {
       "x": [user_score, user_score],
-      "y": [0, int(np.max(counts))]
+      "y": [0, max_y]
     },
     "benchmarks": [
       {
@@ -118,7 +118,7 @@ def get_distribution_json(user_score, all_scores):
 
 # ===== 3. PREDICTION PIPELINE =====
 def run_full_analysis(file_path, model, feature_extractor):
-  audio_full, sr = librosa.load(file_path, sr=SAMPLE_RATE, duration=MAX_TOTAL_DURATION)
+  audio_full, sr = librosa.load(file_path, sr=SAMPLE_RATE, duration=MAX_TOTAL_DURATION_SECONDS)
   samples_per_chunk = int(SAMPLE_RATE * CHUNK_DURATION)
 
   chunk_scores = []
@@ -126,7 +126,7 @@ def run_full_analysis(file_path, model, feature_extractor):
   # sliding window (non-overlapping for speed)
   for start in range(0, len(audio_full) - samples_per_chunk + 1, samples_per_chunk):
     chunk = audio_full[start : start + samples_per_chunk]
-    inputs = feature_extractor(chunk, sampling_rate=SAMPLE_RATE, return_tensor="pt")
+    inputs = feature_extractor(chunk, sampling_rate=SAMPLE_RATE, return_tensors="pt")
     input_values = input['input_values'].to(DEVICE)
     
     with torch.no_grad():
@@ -166,6 +166,10 @@ def run_full_analysis(file_path, model, feature_extractor):
 
   return final_score, spec_b64, heat_b64, len(audio_full)/sr
 
+@app.route('/health', methods=['GET'])
+def health():
+  return jsonify({"status": "healthy", "model": "AST-Bioacoustics"}), 200
+
 @app.route('/analyze', methods=['POST'])
 def analyze():
 
@@ -182,14 +186,14 @@ def analyze():
     # TRIMMING & CONVERTING W/ FFMEG (solves format & duration issues)
     subprocess.run([
       "ffmpeg", "-y", "-i", input_path,
-      "-t", str(MAX_TOTAL_DURATION),
+      "-t", str(MAX_TOTAL_DURATION_SECONDS),
       "-ar", str(SAMPLE_RATE), "-ac", "1",
       processed_path
     ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     score, spec_b64, heat_b64, duration = run_full_analysis(processed_path, model, feature_extractor)
 
-    dist_json = get_distribution_json(score, all_normalized_scores)
+    dist_json = get_distribution_json(score)
 
     return jsonify({
         "biodiversity_score": score,
@@ -212,4 +216,5 @@ if os.path.exists(CHECKPOINT_PATH):
 model.eval()
 
 if __name__ == '__main__':
-  app.run(host='0.0.0.0', port=5000)
+  #app.run(host='0.0.0.0', port=5000)
+  app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))

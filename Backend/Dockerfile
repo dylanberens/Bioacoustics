@@ -33,4 +33,6 @@ EXPOSE 5000
 # cloud run injects a PORT environment variable (usually 8080),
 # but this configured for 5000. This maps in the deploy command
 # use 'gunicorn' (production server) instead of python app.py (dev server)
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--timeout", "120", "--workers", "1", "app:app"]
+CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 app:app
+
+#CMD ["gunicorn", "--bind", "0.0.0.0:8080", "--timeout", "120", "--workers", "1", "app:app"]
