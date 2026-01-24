@@ -127,7 +127,7 @@ def run_full_analysis(file_path, model, feature_extractor):
   for start in range(0, len(audio_full) - samples_per_chunk + 1, samples_per_chunk):
     chunk = audio_full[start : start + samples_per_chunk]
     inputs = feature_extractor(chunk, sampling_rate=SAMPLE_RATE, return_tensors="pt")
-    input_values = input['input_values'].to(DEVICE)
+    input_values = inputs['input_values'].to(DEVICE)
     
     with torch.no_grad():
       pred, _ = model(input_values)
