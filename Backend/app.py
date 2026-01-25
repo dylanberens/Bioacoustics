@@ -41,11 +41,13 @@ class BioAcousticAST(nn.Module):
     # pretrained body
     self.ast = ASTForAudioClassification.from_pretrained(
         pretrained_model_name,
-        ignore_mismatched_sizes=True
+        ignore_mismatched_sizes=True,
+        attn_implementation="eager" # required for attention rollout
     )
 
     # custom regression head
     hidden_size = self.ast.config.hidden_size
+
     self.classifier = nn.Sequential(
         nn.LayerNorm(hidden_size),
         nn.Linear(hidden_size, 256),
@@ -55,17 +57,28 @@ class BioAcousticAST(nn.Module):
         nn.Sigmoid()
     )
 
-  def forward(self, input_values):
-    outputs = self.ast.base_model(input_values)
+  def forward(self, input_values, labels=None, output_attentions=False):
+    # pass thru base transformer
+    outputs = self.ast.base_model(input_values, output_attentions=output_attentions)
+
+    # get CLS token (for rollout)
     last_hidden_state = outputs.last_hidden_state
     cls_token = last_hidden_state[:, 0, :]
+
+    # pass thru custom head
     prediction = self.classifier(cls_token)
-    return prediction
+
+    if output_attentions:
+      # prevents "not enough values to unpack" error
+      return prediction, outputs.attentions
+
+    # return dummy None for loss
+    return prediction, None
 
 def generate_attention_rollout(model, input_values):
   model.eval()
   with torch.no_grad():
-    _, attentions = model(input_values, output_attentions=True)
+    prediction, attentions = model(input_values, output_attentions=True)
 
     seq_len = attentions[0].shape[-1]
     rollout = torch.eye(seq_len).to(DEVICE)
@@ -83,7 +96,7 @@ def generate_attention_rollout(model, input_values):
     heatmap = (heatmap - heatmap.min()) / (heatmap.max() - heatmap.min() + 1e-8)
     return (heatmap.cpu().numpy() * 255).astype(np.uint8)
   
-def get_distribution_json(user_score, all_scores):
+def get_distribution_json(user_score):
   
   max_y = max(BASELINE_HISTOGRAM_Y)
 
@@ -135,7 +148,11 @@ def run_full_analysis(file_path, model, feature_extractor):
       outputs = model(input_values)
       pred = outputs.logits if hasattr(outputs, 'logits') else outputs
       
-      score = pred.item()
+      #score = pred.item()
+      if isinstance(pred, tuple):
+        score = pred[0].item()
+      else:
+        score = pred.item()
       raw_heatmap = generate_attention_rollout(model, input_values)
 
     chunk_scores.append(score)
@@ -152,7 +169,7 @@ def run_full_analysis(file_path, model, feature_extractor):
 
   # 1. Base spectrogram
   fig, ax = plt.subplots(figsize=(12, 3))
-  librosa.display.specshow(spec_db, sr=SAMPLE_RATE, x_axis='time', y_axis='mel', fmax=8000, ax=ax, camp='magma')
+  librosa.display.specshow(spec_db, sr=SAMPLE_RATE, x_axis='time', y_axis='mel', fmax=8000, ax=ax, cmap='magma')
   buf = io.BytesIO()
   plt.savefig(buf, format='png', bbox_inches='tight')
   spec_b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
@@ -160,7 +177,7 @@ def run_full_analysis(file_path, model, feature_extractor):
 
   # 2. heatmap overlay
   fig, ax = plt.subplots(figsize=(12, 3))
-  librosa.display.specshow(spec_db, sr=SAMPLE_RATE, x_axis='time', y_axis='mel', fmax=8000, ax=ax, camp='gray')
+  librosa.display.specshow(spec_db, sr=SAMPLE_RATE, x_axis='time', y_axis='mel', fmax=8000, ax=ax, cmap='gray')
   heatmap_resized = cv2.resize(full_heatmap, (spec_db.shape[1], spec_db.shape[0]))
   ax.imshow(heatmap_resized, cmap='jet', alpha=0.5, aspect='auto', extent=[0, len(audio_full)/sr, 0, 8000], origin='lower')
   buf = io.BytesIO()
