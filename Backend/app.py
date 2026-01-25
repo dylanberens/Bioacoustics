@@ -217,7 +217,7 @@ def analyze():
     dist_json = get_distribution_json(score)
 
     return jsonify({
-        "biodiversity_score": score,
+        "adi_score": score,
         "spectrogram_b64": spec_b64,
         "gradcam_b64": heat_b64, # named gradcam just to amtch Frontend
         "distribution_data": dist_json,
