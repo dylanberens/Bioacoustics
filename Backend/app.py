@@ -218,12 +218,16 @@ def analyze():
 
     return jsonify({
         "adi_score": score,
+        "biodiversity_score": score,
         "spectrogram_b64": spec_b64,
         "gradcam_b64": heat_b64, # named gradcam just to amtch Frontend
         "distribution_data": dist_json,
         "duration": round(duration, 2),
+        "file_size": round(os.path.getsize(processed_path) / (1024 * 1024), 2), # in MB
+        "sample_rate": 16000, #hardcoded model requirement
         "status": "success"
     })
+  
   finally:
     for p in [input_path, processed_path]:
       if os.path.exists(p):

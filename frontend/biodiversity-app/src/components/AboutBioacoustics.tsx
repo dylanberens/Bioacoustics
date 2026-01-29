@@ -83,9 +83,9 @@ export const AboutBioacoustics = () => {
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            justifyContent: 'center',
+            justifyContent: 'flex-start',
             minHeight: '100vh',
-            padding: '0 16px'
+            padding: '120px 16px 40px'
           }}
         >
           <div style={{ maxWidth: '896px', margin: '0 auto', textAlign: 'center' }}>
@@ -112,15 +112,16 @@ export const AboutBioacoustics = () => {
               style={{ fontSize: 'clamp(18px, 2vw, 24px)', color: '#D1D5DB', lineHeight: '1.6' }}
             >
               <p>
-                Bioacoustics is the study of sound production, dispersion, and reception in animals and plants. 
-                Our project harnesses the power of artificial intelligence to analyze audio recordings from 
-                natural environments to assess biodiversity levels.
+                Bioacoustics is the study of sound as it relates to species and ecosystems. The theory behind this project is
+                that species' use sounds to communicate, and thereby evolved to occupy different frequency bands in the overall
+                "soundscape", which is the entire audio space of an ecosystem.
               </p>
 
               <p>
-                Through advanced machine learning algorithms, we can identify and classify various species 
-                based on their unique acoustic signatures. This non-invasive method allows researchers and 
-                conservationists to monitor ecosystem health and biodiversity without disturbing wildlife habitats.
+                Our project uses a state of the art Audio Spectrogram Transformer (AST)-- a type of Vision Transformer (ViT)-- with a custom regression
+                head to analyze audio files, which we project onto 2D space as a Mel Spectrogram (an image representing the audio's frequency, time and amplitude).
+                We have fine tuned this custom model on a dataset of 6,719 soundscapes from the Amazon Rainforest, achieving an r-squared of 0.96 in an example of
+                successful Sequential Transfer Learning.
               </p>
 
               <p>
