@@ -113,7 +113,7 @@ export const AboutBioacoustics = () => {
             >
               <p>
                 Bioacoustics is the study of sound as it relates to species and ecosystems. The theory behind this project is
-                that species' use sounds to communicate, and thereby evolved to occupy different frequency bands in the overall
+                that species use sounds to communicate, and thereby evolved to occupy different frequency bands in the overall
                 "soundscape", which is the entire audio space of an ecosystem.
               </p>
 
@@ -125,8 +125,14 @@ export const AboutBioacoustics = () => {
               </p>
 
               <p>
-                Our Acoustic Diversity Index (ADI) provides a quantitative measure of biodiversity by analyzing 
-                the complexity and richness of soundscapes. The system generates four key outputs:
+                We developed our custom Acoustic Diversity Index (ADI) score as our target variable to assess the presence and dispersion of
+                audio activity across 30 frequency bands, to reward repeated transient animal sounds with a higher biodiversity score. Our custom
+                "Robust ADI" target variable had 5 main characteristics that differentiate it:
+                    1. Background Subtraction - Eliminating constant noise (like rain or rivers) by subtracting the median energy from each band
+                    2. Adaptive Thresholding
+                    3. Frequency Banding
+                    4. Shannon Entropy
+                    5. Soft Fallback
               </p>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginTop: '32px' }}>

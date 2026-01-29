@@ -257,11 +257,17 @@ function App() {
           transition={{ duration: 0.8 }}
           style={{ 
             marginBottom: '4rem',
-            padding: '2rem 1rem',
+            padding: '2rem 2rem',
             marginTop: '2rem',
             textAlign: 'center',
             width: '100%',
-            maxWidth: '1200px'
+            maxWidth: '1200px',
+            // DYLAN added background styling for paragraphs
+            background: 'rgba(0, 0, 0, 0.7)',
+            backdropFilter: 'blur(10px)',
+            borderRadius: '24px',
+            border: '1px solid rgba(16, 185, 129, 0.2)',
+            boxShadow: '0 4px 30px rgba(0, 0, 0, 0.5)'
           }}
         >
           <h1 
