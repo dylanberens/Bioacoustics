@@ -458,6 +458,7 @@ function App() {
               </div>
             </div>
           </div>
+          </motion.div>
           
           {/* Enhanced Loading Overlay */}
           {/* {loading && (
