@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Import Aceternity UI components
 import { BackgroundBeams } from './components/background-gradient';
@@ -31,22 +31,34 @@ function App() {
   const [isBackendConnected, setIsBackendConnected] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
 
-  // Check backend connection on component mount
   useEffect(() => {
-    const checkBackend = async () => {
-      try {
-        const isAvailable = await biodiversityApi.isBackendAvailable();
-        setIsBackendConnected(isAvailable);
-        if (isAvailable) {
-          console.log('✅ Backend connected successfully');
-        }
-      } catch (error) {
-        console.warn('⚠️ Backend connection failed:', error);
-        setIsBackendConnected(false);
-      }
+    if (loading) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
     };
-    checkBackend();
-  }, []);
+  }, [loading]);
+
+
+  // Check backend connection on component mount
+  // useEffect(() => {
+  //   const checkBackend = async () => {
+  //     try {
+  //       const isAvailable = await biodiversityApi.isBackendAvailable();
+  //       setIsBackendConnected(isAvailable);
+  //       if (isAvailable) {
+  //         console.log('✅ Backend connected successfully');
+  //       }
+  //     } catch (error) {
+  //       console.warn('⚠️ Backend connection failed:', error);
+  //       setIsBackendConnected(false);
+  //     }
+  //   };
+  //   checkBackend();
+  // }, []);
 
   const handleFileSelect = (files: File[]) => {
     if (files.length > 0) {
@@ -146,6 +158,7 @@ function App() {
 
 
   return (
+    <>
     <WavyBackground 
       className="text-white w-full"
       containerClassName="w-full min-h-screen relative"
@@ -447,7 +460,7 @@ function App() {
           </div>
           
           {/* Enhanced Loading Overlay */}
-          {loading && (
+          {/* {loading && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -457,7 +470,7 @@ function App() {
               <EnhancedLoading text={loadingMessage || "AI ANALYZING ECOSYSTEM..."} />
             </motion.div>
           )}
-        </motion.div>
+        </motion.div> */}
 
         {/* Results Section - 4 Main Outputs */}
         {analysisResult && (
@@ -792,6 +805,20 @@ function App() {
         )}
       </div>
     </WavyBackground>
+
+    <AnimatePresence mode='wait'>
+      {loading && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[9999]"
+          >
+            <EnhancedLoading text={loadingMessage || "AI ANALYZING ECOSYSTEM..."} />
+          </motion.div>
+          )}
+      </AnimatePresence>
+    </>
   );
 }
 

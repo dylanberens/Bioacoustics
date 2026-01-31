@@ -109,7 +109,16 @@ export const AboutBioacoustics = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
-              style={{ fontSize: 'clamp(18px, 2vw, 24px)', color: '#D1D5DB', lineHeight: '1.6' }}
+              style={{ fontSize: 'clamp(18px, 2vw, 24px)', color: '#D1D5DB', lineHeight: '1.6',
+                        // DYLAN frontend additions
+                        background: 'rgba(0, 0, 0, 0.7)',
+                        backdropFilter: 'blur(10px)',
+                        borderRadius: '24px',
+                        border: '1px solid rgba(16, 185, 129, 0.2)',
+                        boxShadow: '0 4px 30px rgba(0, 0, 0, 0.5)',
+                        padding: '32px',
+                        marginBottom: '40px'
+               }}
             >
               <p>
                 Bioacoustics is the study of sound as it relates to species and ecosystems. The theory behind this project is

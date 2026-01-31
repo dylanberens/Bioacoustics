@@ -51,13 +51,19 @@ export const FileUpload = ({
   const { getRootProps, isDragActive } = useDropzone({
     multiple: false,
     noClick: true,
+    maxSize: 50 * 1024 * 1024, // 50MB limit
     accept: {
       'audio/*': ['.wav', '.mp3', '.flac', '.m4a', '.ogg', '.webm'],
-      'video/webm': ['.webm']
+      'video/webm': ['.webm'],
+      // fallback added by Dylan
+      'application/octet-stream': ['.wav', '.flac']
     },
     onDrop: handleFileChange,
-    onDropRejected: (error: any) => {
-      console.log(error);
+    onDropRejected: (fileRejections) => {
+      // to log why a file was ignored by console
+      fileRejections.forEach((file) => {
+        console.log('❌ File rejecte: ${file.file.name}', file.errors);
+      })
     },
   });
 
