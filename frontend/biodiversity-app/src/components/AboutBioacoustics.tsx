@@ -120,29 +120,38 @@ export const AboutBioacoustics = () => {
                         marginBottom: '40px'
                }}
             >
-              <p>
+              <p style={{ marginBottom: '24px' }}>
                 Bioacoustics is the study of sound as it relates to species and ecosystems. The theory behind this project is
                 that species use sounds to communicate, and thereby evolved to occupy different frequency bands in the overall
                 "soundscape", which is the entire audio space of an ecosystem.
               </p>
 
-              <p>
-                Our project uses a state of the art Audio Spectrogram Transformer (AST)-- a type of Vision Transformer (ViT)-- with a custom regression
+              <p style={{ marginBottom: '24px' }}>
+                Our project uses a state of the art <strong>Audio Spectrogram Transformer (AST)</strong>- a type of Vision Transformer (ViT)-- with a custom regression
                 head to analyze audio files, which we project onto 2D space as a Mel Spectrogram (an image representing the audio's frequency, time and amplitude).
                 We have fine tuned this custom model on a dataset of 6,719 soundscapes from the Amazon Rainforest, achieving an r-squared of 0.96 in an example of
                 successful Sequential Transfer Learning.
               </p>
 
-              <p>
-                We developed our custom Acoustic Diversity Index (ADI) score as our target variable to assess the presence and dispersion of
-                audio activity across 30 frequency bands, to reward repeated transient animal sounds with a higher biodiversity score. Our custom
-                "Robust ADI" target variable had 5 main characteristics that differentiate it:
-                    1. Background Subtraction - Eliminating constant noise (like rain or rivers) by subtracting the median energy from each band
-                    2. Adaptive Thresholding
-                    3. Frequency Banding
-                    4. Shannon Entropy
-                    5. Soft Fallback
+              <p style={{ marginBottom: '16px' }}>
+                We developed our custom <strong>Acoustic Diversity Index (ADI)</strong> score as our target variable to assess the presence and dispersion of
+                audio activity across 30 frequency bands. Our custom "Robust ADI" target variable is defined by five key characteristics:
               </p>
+
+              <div style={{ paddingLeft: '20px', marginBottom: '32px', color: '#E5E7EB' }}>
+                {[
+                  { title: "Background Subtraction", desc: "Removes constant noise (like rain or rivers) by subtracting the median energy across the spectrogram." },
+                  { title: "Adaptive Thresholding", desc: "Only counts sounds >13.5 dB above baseline." },
+                  { title: "Frequency Banding", desc: "Splits the spectrogram into 30 vertically stacked 200Hz frequency bands." },
+                  { title: "Shannon Entropy", desc: "Measures the evenness of activity across the 30 frequency bands to reward diverse ecosystems with different frequencies." },
+                  { title: "Soft Fallback", desc: "Assigns fractional score based on energy sum if nothing >13.5 dB, to discourage true flat 0 scores." }
+                ].map((item, i) => (
+                  <div key={i} style={{ marginBottom: '12px', display: 'flex', gap: '10px', alignItems: 'flex-start'}}>
+                    <span style={{ color: '#10B981', fontWeight: 'bold' }}>{i + 1}.</span>
+                    <span><strong>{item.title}:</strong> {item.desc}</span>
+                  </div>
+                ))}
+              </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginTop: '32px' }}>
                 <motion.div 
@@ -158,7 +167,7 @@ export const AboutBioacoustics = () => {
                 >
                   <h3 style={{ fontSize: '20px', fontWeight: '600', color: '#10B981', marginBottom: '12px' }}>ADI Score</h3>
                   <p style={{ color: '#D1D5DB' }}>
-                    A numerical biodiversity index that quantifies the acoustic diversity of the environment.
+                    A numerical score representating the biodiversity of the environment in the audio file
                   </p>
                 </motion.div>
 
@@ -175,7 +184,7 @@ export const AboutBioacoustics = () => {
                 >
                   <h3 style={{ fontSize: '20px', fontWeight: '600', color: '#10B981', marginBottom: '12px' }}>Mel Spectrogram</h3>
                   <p style={{ color: '#D1D5DB' }}>
-                    Visual representation of audio frequencies over time, revealing patterns in the soundscape.
+                    2D representation of the soundscape audio file, showing frequencies, time and amplitude
                   </p>
                 </motion.div>
 
@@ -192,7 +201,7 @@ export const AboutBioacoustics = () => {
                 >
                   <h3 style={{ fontSize: '20px', fontWeight: '600', color: '#10B981', marginBottom: '12px' }}>Score Distribution</h3>
                   <p style={{ color: '#D1D5DB' }}>
-                    Interactive visualization showing the distribution of biodiversity scores across the recording.
+                    Interactive visualization showing the distribution of biodiversity scores from the Kaggle Amazon Rainforest dataset
                   </p>
                 </motion.div>
 
@@ -207,9 +216,9 @@ export const AboutBioacoustics = () => {
                     border: '1px solid rgba(16, 185, 129, 0.3)'
                   }}
                 >
-                  <h3 style={{ fontSize: '20px', fontWeight: '600', color: '#10B981', marginBottom: '12px' }}>Grad-CAM Heatmap</h3>
+                  <h3 style={{ fontSize: '20px', fontWeight: '600', color: '#10B981', marginBottom: '12px' }}>Attention Rollout Heatmap</h3>
                   <p style={{ color: '#D1D5DB' }}>
-                    Heat map visualization highlighting the most important acoustic features for biodiversity assessment.
+                    Visualization for Explainable AI (XAI), marking spectrogram regions that influenced the model's predicted score
                   </p>
                 </motion.div>
               </div>
@@ -218,9 +227,9 @@ export const AboutBioacoustics = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 1.4 }}
-                style={{ fontSize: '20px', color: '#10B981', fontWeight: '600', marginTop: '32px' }}
+                style={{ fontSize: '20px', color: '#10B981', fontWeight: '600', marginTop: '40px', textAlign: 'center' }}
               >
-                Join us in revolutionizing biodiversity monitoring through the power of sound and AI.
+                Machine Learning has powerful applications towards protecting our ecosystems and planet
               </motion.p>
             </motion.div>
           </div>
