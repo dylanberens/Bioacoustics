@@ -30,7 +30,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
   const [isBackendConnected, setIsBackendConnected] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState('');
+  // const [loadingMessage, setLoadingMessage] = useState('');
 
   useEffect(() => {
     if (loading) {
@@ -92,12 +92,12 @@ function App() {
 
     setLoading(true);
     setError('');
-    setLoadingMessage('Uploading and processing audio file...');
+    // setLoadingMessage('Uploading and processing audio file...');
 
     try {
       // Check if backend is connected
       if (!isBackendConnected) {
-        setLoadingMessage('Checking backend connection...');
+        // setLoadingMessage('Checking backend connection...');
         const isAvailable = await biodiversityApi.isBackendAvailable();
         if (!isAvailable) {
           throw new Error('Backend server is not available. Please make sure the Flask API is running on http://127.0.0.1:5000');
@@ -105,7 +105,7 @@ function App() {
         setIsBackendConnected(true);
       }
 
-      setLoadingMessage('AI analyzing ecosystem patterns...');
+      // setLoadingMessage('AI analyzing ecosystem patterns...');
       console.log('📤 Sending file to backend:', selectedFile.name);
 
       // Call the real API
@@ -129,12 +129,12 @@ function App() {
       console.log('🔍 Final distribution_data:', analysisResult.distribution_data);
       
       setAnalysisResult(analysisResult);
-      setLoadingMessage('');
+      // setLoadingMessage('');
 
     } catch (error) {
       console.error('❌ Analysis failed:', error);
       setError(error instanceof Error ? error.message : 'Analysis failed. Please try again.');
-      setLoadingMessage('');
+      // setLoadingMessage('');
     } finally {
       setLoading(false);
     }
