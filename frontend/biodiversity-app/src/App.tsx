@@ -7,7 +7,8 @@ import { FileUpload } from './components/file-upload';
 import { Spotlight } from './components/spotlight';
 import { FloatingNav } from './components/floating-nav';
 import { GridBackground } from './components/grid-background';
-import { EnhancedLoading } from './components/enhanced-loading';
+// import { EnhancedLoading } from './components/enhanced-loading';
+import { SimpleLoading } from './components/simple-loading';
 import { WavyBackground } from './components/wavy-background';
 import PlotlyDistributionChart from './components/PlotlyDistributionChart';
 import GradCAMHeatmap from './components/GradCAMHeatmap';
@@ -829,7 +830,7 @@ function App() {
               justifyContent: 'center'
             }}
           >
-            <EnhancedLoading text={loadingMessage || "AI ANALYZING ECOSYSTEM..."} />
+            <SimpleLoading />
           </motion.div>
           )}
       </AnimatePresence>
