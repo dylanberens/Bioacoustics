@@ -745,7 +745,7 @@ function App() {
                   color: '#10B981',
                   fontFamily: 'monospace'
                 }}>
-                  // OUTPUT 4: GRAD-CAM HEATMAP
+                  // OUTPUT 4: ATTENTION ROLLOUT HEATMAP
                 </h3>
                 <div style={{ textAlign: 'center' }}>
                   <GradCAMHeatmap 

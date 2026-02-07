@@ -30,8 +30,8 @@ SAMPLE_RATE = 16000
 CHUNK_DURATION = 10.24
 MAX_TOTAL_DURATION_SECONDS = 60.0
 
-BASELINE_HISTOGRAM_Y = [3, 2, 1, 1, 2, 4, 8, 12, 18, 24, 32, 55, 75, 95, 115, 122, 105, 92, 85, 68]
-BIN_CENTERS = np.linspace(0.025, 0.975, 20).tolist()
+BASELINE_HISTOGRAM_Y = [3, 3, 0, 1, 0, 1, 1, 1, 0, 1, 1, 3, 9, 3, 6, 8, 3, 13, 12, 14, 29, 22, 20, 35, 35, 44, 48, 54, 67, 65, 102, 103, 129, 147, 136, 185, 176, 165, 216, 175, 214, 219, 196, 173, 158, 168, 159, 145, 169, 152]
+BIN_CENTERS = np.linspace(0.01, 0.99, 50).tolist()
 
 # === 2. MODEL DEF & VIZ LOGIC ===
 class BioAcousticAST(nn.Module):
@@ -111,16 +111,16 @@ def get_distribution_json(user_score):
     },
     "benchmarks": [
       {
-        "name": "Amazon Basin Avg",
-        "x": [0.82, 0.82],
+        "name": "Amazon Rainforest Mean",
+        "x": [0.76, 0.76],
         "y": [0, max_y],
         "type": "scatter",
         "mode": "lines",
         "line": {"dash": "dash", "width": 2}
       },
       {
-        "name": "City Park (Houston)",
-        "x": [0.45, 0.45],
+        "name": "Degraded State (Lower 1% - Amazon)",
+        "x": [0.3146, 0.3146],
         "y": [0, max_y],
         "type": "scatter",
         "mode": "lines",

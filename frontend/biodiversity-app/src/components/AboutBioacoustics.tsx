@@ -245,7 +245,7 @@ export const AboutBioacoustics = () => {
                 transition={{ duration: 0.8, delay: 1.4 }}
                 style={{ fontSize: '20px', color: '#10B981', fontWeight: '600', marginTop: '40px', textAlign: 'center' }}
               >
-                Machine Learning has powerful applications towards protecting our ecosystems and planet
+                Machine Learning has powerful applications for protecting our ecosystems and planet
               </motion.p>
             </motion.div>
           </div>
