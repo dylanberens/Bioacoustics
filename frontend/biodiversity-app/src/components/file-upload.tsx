@@ -62,7 +62,7 @@ export const FileUpload = ({
     onDropRejected: (fileRejections) => {
       // to log why a file was ignored by console
       fileRejections.forEach((file) => {
-        console.log('❌ File rejecte: ${file.file.name}', file.errors);
+        console.log('❌ File rejected: ${file.file.name}', file.errors);
       })
     },
   });
@@ -160,7 +160,9 @@ export const FileUpload = ({
                   </div>
                 </motion.div>
               ))}
-            {!files.length && (
+
+            {/* commented out by dylan: looked broken and not needed */}
+            {/* {!files.length && (
               <motion.div
                 layoutId="file-upload"
                 variants={mainVariant}
@@ -187,14 +189,14 @@ export const FileUpload = ({
                   <IconUpload className="h-4 w-4 text-white" />
                 )}
               </motion.div>
-            )}
+            )} */}
 
-            {!files.length && (
+            {/* {!files.length && (
               <motion.div
                 variants={secondaryVariant}
                 className="absolute opacity-0 border border-dashed border-sky-400 inset-0 z-30 bg-transparent flex items-center justify-center h-32 mt-4 w-full max-w-[8rem] mx-auto rounded-md"
               ></motion.div>
-            )}
+            )} */}
           </div>
         </div>
       </motion.div>

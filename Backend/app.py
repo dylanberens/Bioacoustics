@@ -89,7 +89,7 @@ def generate_attention_rollout(model, input_values):
       rollout = torch.matmul(rollout, a_map)
     
     cls_attention = rollout[0, 2:]
-    grid_h = 12
+    grid_h = 8 # changed from 12 -> 8 to match AST patch size 512 (8 freq bins x 64 time frames)
     grid_w = cls_attention.shape[0] // grid_h
     heatmap = cls_attention[:grid_h*grid_w].reshape(grid_h, grid_w)
 

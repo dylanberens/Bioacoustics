@@ -58,19 +58,19 @@ const teamMembers = [
     name: "Dylan Berens",
     role: "Machine Learning Engineer",
     description: "Hi, I'm Dylan. I specialize in Machine Learning, I enjoy long distance swimming, and I handled the backend & Docker containerization for our project.",
-    skills: ["TensorFlow", "Transfer Learning", "Docker", "Vision Transformers (ViTs)"]
+    skills: ["TensorFlow", "PyTorch", "Docker", "Google Cloud", "Vision Transformers (ViT)", "ETL Pipelines", "Transfer Learning"]
   },
   {
     name: "Shruthi Yenamagandla", 
     role: "CNN Architect",
     description: "Focuses on the implementation of the baseline CNN model for the bioacoustics analysis.",
-    skills: ["Python", "TensorFlow/Keras", "Librosa", "Google Colab"]
+    skills: ["CNNs", "Python", "TensorFlow", "Librosa", "Google Colab"]
   },
   {
     name: "Dominic McDonald",
     role: "Data Science Web Master",
     description: "Developed the User Interface and integrated the API's for bioacoustics analysis.",
-    skills: ["TypeScript", "Python", "Vite", "TailwindCSS"]
+    skills: ["React", "TypeScript", "Python", "Vite", "TailwindCSS"]
   }
 ];
 
@@ -106,7 +106,8 @@ export const AboutUs = () => {
             alignItems: 'center',
             justifyContent: 'center',
             minHeight: '100vh',
-            padding: '80px 16px'
+            // increased padding dylan
+            padding: '120px 16px 80px'
           }}
         >
           <div style={{ maxWidth: '1152px', margin: '0 auto', textAlign: 'center' }}>
@@ -138,8 +139,8 @@ export const AboutUs = () => {
                 lineHeight: '1.6'
               }}
             >
-              We are a passionate team of researchers, developers, and conservationists dedicated to 
-              revolutionizing biodiversity monitoring through cutting-edge technology and artificial intelligence.
+              We are a passionate team of researchers and developers, dedicated to 
+              revolutionizing biodiversity monitoring by leveraging Machine Learning and cutting-edge technology.
             </motion.p>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '32px', marginTop: '64px' }}>
@@ -190,12 +191,14 @@ export const AboutUs = () => {
                       <span 
                         key={skillIndex}
                         style={{
+                          // changed by dylan to look less clickable for UX
                           padding: '4px 12px',
-                          backgroundColor: 'rgba(16, 185, 129, 0.2)',
-                          color: '#34D399',
-                          borderRadius: '20px',
-                          fontSize: '14px',
-                          border: '1px solid rgba(16, 185, 129, 0.3)'
+                          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                          color: '#D1D5DB',
+                          borderRadius: '6px',
+                          fontSize: '13px',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          cursor: 'default'
                         }}
                       >
                         {skill}
@@ -220,11 +223,9 @@ export const AboutUs = () => {
             >
               <h2 style={{ fontSize: '30px', fontWeight: 'bold', color: 'white', marginBottom: '16px' }}>Our Mission</h2>
               <p style={{ fontSize: '18px', color: '#D1D5DB', lineHeight: '1.6' }}>
-                To bridge the gap between technology and conservation by developing innovative tools 
-                that help researchers, conservationists, and policymakers make data-driven decisions 
-                for protecting our planet's biodiversity. Through the power of AI and bioacoustic 
-                analysis, we're making biodiversity monitoring more accessible, accurate, and scalable 
-                than ever before.
+                Our goal is to promote applications of Machine Learning that make the world a better place.
+                We see the most exciting applications of Machine Learning as doing the things that humans alone could not 
+                accomplish, to do good for our world (e.g., protecting ecosystems and the environment).
               </p>
             </motion.div>
           </div>

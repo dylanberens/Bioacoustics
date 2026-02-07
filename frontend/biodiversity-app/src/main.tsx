@@ -5,10 +5,13 @@ import './index.css'
 import App from './App.tsx'
 import { AboutBioacoustics } from './components/AboutBioacoustics.tsx'
 import { AboutUs } from './components/AboutUs.tsx'
+import ScrollToTop from './components/ScrollToTop.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <Router>
+      <ScrollToTop />
+
       <Routes>
         <Route path="/" element={<App />} />
         <Route path="/about-bioacoustics" element={<AboutBioacoustics />} />

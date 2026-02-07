@@ -109,14 +109,15 @@ export const AboutBioacoustics = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
-              style={{ fontSize: 'clamp(18px, 2vw, 24px)', color: '#D1D5DB', lineHeight: '1.6',
+              style={{ fontSize: 'clamp(16px, 1.5vw, 18px)', color: '#D1D5DB', lineHeight: '1.8',
                         // DYLAN frontend additions
+                        textAlign: 'left',
                         background: 'rgba(0, 0, 0, 0.7)',
                         backdropFilter: 'blur(10px)',
                         borderRadius: '24px',
                         border: '1px solid rgba(16, 185, 129, 0.2)',
                         boxShadow: '0 4px 30px rgba(0, 0, 0, 0.5)',
-                        padding: '32px',
+                        padding: '40px',
                         marginBottom: '40px'
                }}
             >
@@ -126,12 +127,27 @@ export const AboutBioacoustics = () => {
                 "soundscape", which is the entire audio space of an ecosystem.
               </p>
 
+              {/* Green divider line added by dylan */}
+              <div style={{
+                height: '1px',
+                width: '100%',
+                background: 'linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.4), transparent)',
+                margin: '2rem 0'
+              }}/>
+
               <p style={{ marginBottom: '24px' }}>
                 Our project uses a state of the art <strong>Audio Spectrogram Transformer (AST)</strong>- a type of Vision Transformer (ViT)-- with a custom regression
                 head to analyze audio files, which we project onto 2D space as a Mel Spectrogram (an image representing the audio's frequency, time and amplitude).
                 We have fine tuned this custom model on a dataset of 6,719 soundscapes from the Amazon Rainforest, achieving an r-squared of 0.96 in an example of
                 successful Sequential Transfer Learning.
               </p>
+
+              <div style={{
+                height: '1px',
+                width: '100%',
+                background: 'linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.4), transparent)',
+                margin: '2rem 0'
+              }}/>
 
               <p style={{ marginBottom: '16px' }}>
                 We developed our custom <strong>Acoustic Diversity Index (ADI)</strong> score as our target variable to assess the presence and dispersion of
@@ -146,7 +162,7 @@ export const AboutBioacoustics = () => {
                   { title: "Shannon Entropy", desc: "Measures the evenness of activity across the 30 frequency bands to reward diverse ecosystems with different frequencies." },
                   { title: "Soft Fallback", desc: "Assigns fractional score based on energy sum if nothing >13.5 dB, to discourage true flat 0 scores." }
                 ].map((item, i) => (
-                  <div key={i} style={{ marginBottom: '12px', display: 'flex', gap: '10px', alignItems: 'flex-start'}}>
+                  <div key={i} style={{ marginBottom: '12px', display: 'flex', gap: '10px' }}>
                     <span style={{ color: '#10B981', fontWeight: 'bold' }}>{i + 1}.</span>
                     <span><strong>{item.title}:</strong> {item.desc}</span>
                   </div>
