@@ -2,29 +2,30 @@
 import { cn } from "../lib/utils";
 import { useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { IconUpload } from "@tabler/icons-react";
+// import { IconUpload } from "@tabler/icons-react";
 import { useDropzone } from "react-dropzone";
 
-const mainVariant = {
-  initial: {
-    x: 0,
-    y: 0,
-  },
-  animate: {
-    x: 20,
-    y: -20,
-    opacity: 0.9,
-  },
-};
+// commented these unused vars out w/ hover upload broken text fix -- dylan
+// const mainVariant = {
+//   initial: {
+//     x: 0,
+//     y: 0,
+//   },
+//   animate: {
+//     x: 20,
+//     y: -20,
+//     opacity: 0.9,
+//   },
+// };
 
-const secondaryVariant = {
-  initial: {
-    opacity: 0,
-  },
-  animate: {
-    opacity: 1,
-  },
-};
+// const secondaryVariant = {
+//   initial: {
+//     opacity: 0,
+//   },
+//   animate: {
+//     opacity: 1,
+//   },
+// };
 
 export const FileUpload = ({
   onChange,
@@ -48,7 +49,7 @@ export const FileUpload = ({
     fileInputRef.current?.click();
   };
 
-  const { getRootProps, isDragActive } = useDropzone({
+  const { getRootProps } = useDropzone({
     multiple: false,
     noClick: true,
     maxSize: 50 * 1024 * 1024, // 50MB limit
