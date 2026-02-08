@@ -84,62 +84,61 @@ export const GradCAMHeatmap: React.FC<GradCAMHeatmapProps> = ({
         borderRadius: '8px',
         border: '2px solid rgba(16, 185, 129, 0.6)',
         boxShadow: '0 4px 16px rgba(16, 185, 129, 0.3)',
-        display: 'inline-block',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
         maxWidth: '100%'
       }}>
-        {displayImage ? (
-          <div style={{ position: 'relative' }}>
-            <img 
-              src={displayImage}
-              alt="Grad-CAM Heatmap"
-              style={{
-                maxWidth: '100%',
-                height: 'auto',
-                borderRadius: '4px',
-                border: '1px solid rgba(16, 185, 129, 0.4)'
-              }}
-            />
-            {/* Overlay text for demo */}
+
+        {/* hud header start - big dylan change */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          borderBottom: '1px solid rgba(16, 185, 129, 0.2)',
+          paddingBottom: '8px'
+        }}>
+          <div style={{
+            background: 'rgba(16, 185, 129, 0.1)',
+            color: '#10B981',
+            padding: '4px 8px',
+            borderRadius: '4px',
+            fontSize: '0.9rem',
+            fontFamily: 'monospace',
+            border: '1px solid rgba(16, 185, 129, 0.3)',
+            fontWeight: 'bold'
+          }}>
+            ATTENTION SCORE: {(biodiversityScore * 100).toFixed(1)}%
+          </div>
+
+          {/* Color legend jet colormap */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ color: '#9CA3AF', fontSize: '0.75rem', fontFamily: 'monospace' }}>LOW</span>
             <div style={{
-              position: 'absolute',
-              top: '10px',
-              left: '10px',
-              background: 'rgba(0, 0, 0, 0.8)',
-              color: '#10B981',
-              padding: '4px 8px',
-              borderRadius: '4px',
-              fontSize: '0.8rem',
-              fontFamily: 'monospace',
-              border: '1px solid rgba(16, 185, 129, 0.5)'
-            }}>
-              ATTENTION: {(biodiversityScore * 100).toFixed(1)}%
-            </div>
-            
-            {/* Legend */}
-            <div style={{
-              position: 'absolute',
-              bottom: '10px',
-              right: '10px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              background: 'rgba(0, 0, 0, 0.8)',
-              padding: '4px 8px',
-              borderRadius: '4px',
-              fontSize: '0.7rem',
-              fontFamily: 'monospace',
-              border: '1px solid rgba(16, 185, 129, 0.5)'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <div style={{
-                  width: '12px',
-                  height: '12px',
-                  background: 'linear-gradient(90deg, #EF4444, #F59E0B, #22C55E)',
-                  borderRadius: '2px'
-                }}></div>
-                <span style={{ color: '#D1D5DB' }}>Low → High</span>
-              </div>
-            </div>
+              width: '60px',
+              height: '12px',
+              background: 'linear-gradient(90deg, #0000FF, #00FFFF, #FFFF00, #FF0000)',
+              borderRadius: '2px',
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}></div>
+            <span style={{ color: '#D1D5DB', fontSize: '0.75rem', fontFamily: 'monospace' }}>HIGH</span>
+          </div>
+        </div>
+
+          {/* image display */}
+          {displayImage ? (
+            <div style={{ position: 'relative', width: '100%' }}>
+              <img
+                src={displayImage}
+                alt="Attention Rollout Heatmap"
+                style={{
+                  width: '100%',
+                  height: 'auto',
+                  borderRadius: '4px',
+                  border: '1px solid rgba(16, 185, 129, 0.2)',
+                  display: 'block'
+                }}
+              />
           </div>
         ) : (
           <div style={{
@@ -153,22 +152,9 @@ export const GradCAMHeatmap: React.FC<GradCAMHeatmapProps> = ({
             justifyContent: 'center',
             color: '#10B981',
             fontFamily: 'monospace',
-            position: 'relative',
-            overflow: 'hidden',
             textAlign: 'center',
-            fontSize: 'clamp(0.8rem, 2vw, 1rem)'
           }}>
-            <div style={{
-              position: 'absolute',
-              inset: 0,
-              background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(245, 158, 11, 0.2), rgba(34, 197, 94, 0.3))',
-              opacity: 0.6
-            }}></div>
-            <div style={{ position: 'relative', zIndex: 10 }}>
-              [GRAD-CAM VISUALIZATION]<br />
-              AI Attention Heatmap<br />
-              Feature Importance
-            </div>
+            [VISUALIZATION LOADING . . .]
           </div>
         )}
       </div>
@@ -180,7 +166,7 @@ export const GradCAMHeatmap: React.FC<GradCAMHeatmapProps> = ({
         textAlign: 'center',
         fontFamily: 'monospace'
       }}>
-        Gradient-weighted Class Activation Mapping showing AI model focus areas
+        Attention Rollout Heatmap showing the regions that most influenced the model's prediction
       </p>
     </div>
   );

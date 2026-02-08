@@ -119,7 +119,7 @@ def get_distribution_json(user_score):
         "line": {"dash": "dash", "width": 2}
       },
       {
-        "name": "Degraded State (Lower 1% - Amazon)",
+        "name": "Degraded (Lower 1% Amazon)",
         "x": [0.3146, 0.3146],
         "y": [0, max_y],
         "type": "scatter",

@@ -143,7 +143,8 @@ export const AboutUs = () => {
               revolutionizing biodiversity monitoring by leveraging Machine Learning and cutting-edge technology.
             </motion.p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '32px', marginTop: '64px' }}>
+            {/* altered style from grid to flex so doms card gets centered --dylan */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '32px', marginTop: '64px' }}>
               {teamMembers.map((member, index) => (
                 <motion.div 
                   key={index}
@@ -151,6 +152,8 @@ export const AboutUs = () => {
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.6 + (index * 0.2) }}
                   style={{
+                    flex: '1 1 400px',
+                    maxWidth: '450px',
                     background: 'linear-gradient(135deg, rgba(6, 78, 59, 0.2), rgba(0, 0, 0, 0.4))',
                     padding: '32px',
                     borderRadius: '12px',
@@ -186,7 +189,8 @@ export const AboutUs = () => {
                     {member.description}
                   </p>
                   
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {/* added center justify to style --dylan */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
                     {member.skills.map((skill, skillIndex) => (
                       <span 
                         key={skillIndex}

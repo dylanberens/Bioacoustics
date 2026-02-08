@@ -138,7 +138,7 @@ export const AboutBioacoustics = () => {
               <p style={{ marginBottom: '24px' }}>
                 Our project uses a state of the art <strong>Audio Spectrogram Transformer (AST)</strong>- a type of Vision Transformer (ViT)-- with a custom regression
                 head to analyze audio files, which we project onto 2D space as a Mel Spectrogram (an image representing the audio's frequency, time and amplitude).
-                We have fine tuned this custom model on a dataset of 6,719 soundscapes from the Amazon Rainforest, achieving an r-squared of 0.96 in an example of
+                We have fine tuned this custom model on a dataset of 6,719 soundscapes from the Amazon Rainforest, achieving an r-squared of 0.95 in an example of
                 successful Sequential Transfer Learning.
               </p>
 
@@ -238,6 +238,42 @@ export const AboutBioacoustics = () => {
                   </p>
                 </motion.div>
               </div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 30}}
+                animate={{ opacity: 1, y: 0}}
+                transition={{ duration: 0.8, delay: 0.5 }}
+                style={{
+                  marginTop: '40px',
+                  padding: '24px',
+                  background: 'linear-gradient(90deg, rgba(16, 185, 129, 0.1), transparent)',
+                  borderLeft: '4px solid #10B981',
+                  borderRadius: '0 12px 12px 0',
+                  textAlign: 'left',
+                  maxWidth: '800px',
+                  margin: '40px auto'
+                }}
+              >
+                <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: '#10B981', marginBottom: '8px' }}>
+                  Inspiration
+                </h3>
+                <p style={{ fontSize: '16px', color: '#D1D5DB', fontStyle: 'italic', lineHeight: '1.6' }}>
+                  Our project was heavily inspired by <span style={{ color: 'white' }}>Drew Purves&apos;</span> appearance on{' '}
+                  <a
+                  href="https://www.youtube.com/watch?v=vIIIau06wGo"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: '#10B981',
+                    textDecoration: 'underline',
+                    cursor: 'pointer'
+                  }}
+                >
+                  The nature of AI: solving the planet&apos;s data gap
+                </a>
+                {' '} (Google DeepMind: The Podcast).
+                </p>
+              </motion.div>
 
               <motion.p 
                 initial={{ opacity: 0, y: 20 }}
