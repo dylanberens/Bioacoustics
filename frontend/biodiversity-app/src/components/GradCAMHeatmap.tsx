@@ -117,7 +117,8 @@ export const GradCAMHeatmap: React.FC<GradCAMHeatmapProps> = ({
             <div style={{
               width: '60px',
               height: '12px',
-              background: 'linear-gradient(90deg, #0000FF 0%, #00FFFF 33%, #FFFF00 66%, #FF0000 100%)',
+              background: 'linear-gradient(to right, #0000FF, #00FFFF, #FFFF00, #FF0000)',
+              backgroundRepeat: 'no-repeat', // stops red artifact that made legend misleading with red at start
               borderRadius: '2px',
               border: '1px solid rgba(255, 255, 255, 0.1)'
             }}></div>
