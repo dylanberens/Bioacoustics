@@ -119,7 +119,7 @@ def get_distribution_json(user_score):
         "line": {"dash": "dash", "width": 2}
       },
       {
-        "name": "Degraded (Low 1% Amazon)",
+        "name": "Degraded (<1% Amazon)",
         "x": [0.3146, 0.3146],
         "y": [0, max_y],
         "type": "scatter",
@@ -178,7 +178,7 @@ def run_full_analysis(file_path, model, feature_extractor):
   # 2. heatmap overlay
   fig, ax = plt.subplots(figsize=(12, 3))
   librosa.display.specshow(spec_db, sr=SAMPLE_RATE, x_axis='time', y_axis='mel', fmax=8000, ax=ax, cmap='gray', zorder=1)
-  heatmap_resized = cv2.resize(full_heatmap, (spec_db.shape[1], spec_db.shape[0]))
+  heatmap_resized = cv2.resize(full_heatmap, (spec_db.shape[1], spec_db.shape[0]), interpolation=cv2.INTER_NEAREST)
   ax.imshow(heatmap_resized, cmap='jet', alpha=0.5, aspect='auto', extent=[0, len(audio_full)/sr, 0, 8000], origin='lower', zorder=10)
   buf = io.BytesIO()
   plt.savefig(buf, format='png', bbox_inches='tight')
