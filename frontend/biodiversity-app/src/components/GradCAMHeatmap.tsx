@@ -108,7 +108,7 @@ export const GradCAMHeatmap: React.FC<GradCAMHeatmapProps> = ({
             border: '1px solid rgba(16, 185, 129, 0.3)',
             fontWeight: 'bold'
           }}>
-            ATTENTION SCORE: {(biodiversityScore * 100).toFixed(1)}%
+            BIODIVERSITY SCORE: {(biodiversityScore * 100).toFixed(1)}%
           </div>
 
           {/* Color legend jet colormap */}
