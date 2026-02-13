@@ -178,7 +178,7 @@ def run_full_analysis(file_path, model, feature_extractor):
   # 2. heatmap overlay
   fig, ax = plt.subplots(figsize=(12, 3))
   librosa.display.specshow(spec_db, sr=SAMPLE_RATE, x_axis='time', y_axis='mel', fmax=8000, ax=ax, cmap='gray', zorder=1)
-  heatmap_resized = cv2.resize(full_heatmap, (spec_db.shape[1], spec_db.shape[0]), interpolation=cv2.INTER_NEAREST)
+  heatmap_resized = cv2.resize(full_heatmap, (spec_db.shape[1], spec_db.shape[0]))
   ax.imshow(heatmap_resized, cmap='jet', alpha=0.5, aspect='auto', extent=[0, len(audio_full)/sr, 0, 8000], origin='lower', zorder=10)
   buf = io.BytesIO()
   plt.savefig(buf, format='png', bbox_inches='tight')
