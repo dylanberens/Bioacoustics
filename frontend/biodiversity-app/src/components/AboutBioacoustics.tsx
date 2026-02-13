@@ -271,7 +271,7 @@ export const AboutBioacoustics = () => {
                 >
                   The nature of AI: solving the planet&apos;s data gap
                 </a>
-                {' '} (Google DeepMind: The Podcast).
+                {' '} (Google DeepMind: The Podcast) with Professor Hannah Fry.
                 </p>
               </motion.div>
 
