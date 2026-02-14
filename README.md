@@ -1,144 +1,87 @@
-# Biodiversity Analysis Web Application
+# Bioacoustics: Assessing Ecosystem Biodiversity using Transformers
 
-This project analyzes ecosystem biodiversity from audio recordings using AI-powered acoustic analysis.
+![Python](https://img.shields.io/badge/Python-3.9-blue?style=for-the-badge&logo=python&logoColor=white)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.0-ee4c2c?style=for-the-badge&logo=pytorch&logoColor=white)
+![TensorFlow](https://img.shields.io/badge/TensorFlow-Research%20Pipeline-FF6F00?style=for-the-badge&logo=tensorflow&logoColor=white)
+![Librosa](https://img.shields.io/badge/Librosa-Audio_Processing-8CAAE6?style=for-the-badge&logo=python&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Containerized-2496ed?style=for-the-badge&logo=docker&logoColor=white)
+![GCP](https://img.shields.io/badge/Google_Cloud-Deployed-4285F4?style=for-the-badge&logo=google-cloud&logoColor=white)
+![React](https://img.shields.io/badge/Frontend-React_TypeScript-61DAFB?style=for-the-badge&logo=react&logoColor=black)
 
-## Project Structure:
+## [**Live Website: https://bioacoustics.vercel.app**](https://bioacoustics.vercel.app)
 
-```
-COSC4337/
-├── Backend/
-│   ├── app.py                    # Flask API server
-│   ├── requirements.txt          # Python dependencies
-│   └── ADI_R3_Bioacoustics.ipynb # Original analysis notebook
-└── Frontend/
-    └── animal-audio-app/         # Next.js React application
-```
+![Project Demo](https://github.com/user-attachments/assets/6eae24ac-d87b-4f22-94b3-67f175e2e60a)
 
-## Features
+*(Real-time inference showing biodiversity scoring, spectrogram generation, plotly distribution & XAI heatmap)*
 
-- **Audio Upload**: Support for WAV, MP3, FLAC, M4A, OGG, WebM formats (up to 50MB)
-- **Biodiversity Analysis**: Calculates Acoustic Diversity Index (ADI) scores
-- **Spectrogram Visualization**: Matplotlib-generated frequency analysis plots
-- **Interactive Distribution**: Plotly charts comparing scores to ecosystem benchmarks
-- **Real-time Processing**: Fast analysis with progress indicators
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-## Setup Instructions
+### 🏆 1st Place - AI & Data Science Showcase 
+**(University of Houston, HPE-Data Science Institute) - Fall 2025**
 
-### Backend Setup
+Our team developed an end-to-end ML pipeline for assessing the biodiversity of ecosystems using only the audio signal as input to a custom Audio Spectrogram Transformer (AST).
 
-1. Navigate to the backend directory:
+**Our Team:**
+* **Dylan Berens** (Machine Learning Engineer)
+* **Dominic McDonald** (Data Science Webmaster)
+* **Shruthi Yenamagandla** (CNN Architect)
+
+---
+
+## 🚰 Data Pipeline 
+* **Input:** We projected the raw audio waveform (1D) onto a 2D surface as a Mel Audio Spectrogram, representing frequency as the y-axis, time as the x-axis, and amplitude as the coloring of the image. <img width="1029" height="294" alt="spectrogram" src="https://github.com/user-attachments/assets/79d70801-0eb1-4474-9c3f-6eafe18cfd4a" />
+* **Target Variable:** We created a custom "Robust Acoustic Diversity Index (ADI)", a calculation derived from the Shannon Entropy across 30 frequency bands.
+  * Background Subtraction: removes constant noise (e.g., rain)
+  * Adaptive Thresholding: only count sounds >13.5dB above baseline
+  * Soft Fallback: assigns a fractional score based on energy sum if nothing >13.5 dB
+* **Dataset:** [Kaggle RFCx Species Audio Detection](https://www.kaggle.com/competitions/rfcx-species-audio-detection/data)
+* **Model:** A pre-trained HuggingFace Audio Spectrogram Transformer (AST) with a 3 layer custom regression head.
+  * Sequential Transfer Learning: ViT-base (ImageNet) -> AST  (AudioSet) -> Our Custom Model (Rainforest Bioacoustics)
+  * Scale: ~86.6M parameters, 101 layers
+* **Libraries:** PyTorch | TensorFlow | HuggingFace | Librosa | NumPy | Pandas | Plotly | Torchaudio | FFmpeg | Matplotlib | OpenCV
+
+---
+
+## ⚙️ Methods & Training
+* **Results:** Achieved **R² = 0.95** after 75 epochs, with our baseline CNN scoring 0.70 with the same setup.
+* **Differential Learning Rates:**
+  * 1e-5 for the backbone to allow for gradual fine tuning of the extensively trained AST backbone
+  * 1e-4 for the custom regression head to more rapidly converge
+* **Temporal Augmentation (Training):** During training our model sees a random 10.24s slice from the 60s file each epoch. This turns what was a limiting constraint based on model architecture (built to digest 10.24s at a time) into a form of data augmentation that promotes generalization: over 75 epochs, the model sees the entire file, but not the same slice twice, preventing memorization.
+  * **Aggregation Logic:** Our method calculates the ADI score for all 6 slices of spectrogram, selects the top 3 scores, and averages them. This was a domain specific choice because an ecosystem is as biodiverse as its most active moments (a panther roar that may only happen once in a 60 second theater of bird sounds and insect drones reflects the true biodiversity "capability" of that ecosystem). We average the top 3 to lower the influence of transient sounds that occur in the upper frequencies but are not biophony (animal sounds)
+* **Loss Function:** Mean Absolute Error (MAE): to not discourage the model for making bold predictions
+* **SpecAugment:** We applied Frequency Masking (horizontal black bars masking Hz ranges) and Temporal Masking (vertical black bars masking time ranges), as a second form of data augmentation, to promote generalizability by further encouraging the model to not rely on particular regions too heavily.
+![SpecAugment Example](https://github.com/user-attachments/assets/fff12cef-3959-40ba-809b-436e6ff4b045)
+
+## 🔬 Explainable AI (XAI): Attention Rollout Heatmap
+We implemented Attention Rollout Heatmaps for model interpretability, to be able to explain *why* our model was predicting the way it did. This visualization marks regions of the Spectrogram it sits on top of, indicating regions of the audio file that most heavily influenced the model's prediction.
+
+<img width="1182" height="401" alt="attention_colab_12bins" src="https://github.com/user-attachments/assets/e337bbb8-9489-4c0a-b16f-053ad565dc2d" />
+
+*(It's worth noting early versions of this project resulted in attention heatmaps with broad regions marked; the sparse, targeted marks on our current attention rollout heatmaps are indicative of a confident model that knows where to look to assess biodiversity, which aligns with the 0.95 R² of our final AST model.)*
+
+---
+
+## 🚀 Deployment
+* **Sliding Window Inference (Production):** Since the AST expects an input of 10.24s, our approach stitches together 6 non-overlapping windows when performing inference to account for the 60s length of the soundscapes in our dataset.
+* **Containerization (Docker):** Our inference backend is fully containerized, handling complex dependencies and allowing reproducibility across coding environments
+* **Google Cloud Run:** We deployed our containerized backend on Google Cloud to allow our website to run 24/7 (and autoscale based on traffic) without manually running our original Colab notebook
+* **Frontend (Vercel):** Our website and frontend is hosted on Vercel and is a React/TypeScript dashboard for real-time inference and visualization that is live and runs 24/7
+
+---
+
+## Acknowledgements:
+
+**Dr. Nouhad Rizk** for her mentoring and leadership! Not only did you teach my two favorite classes by far in all of undergrad (Data Science I & Data Science II), but your active involvement in getting students engaged on campus (creating numerous clubs, encouraging classroom participation, hosting university-wide data science events) is huge. 
+
+**Drew Purves** appearance on Google DeepMind: The Podcast with Hannah Fry heavily inspired the topic of our team's project. "The Nature of AI: solving the planet's data gap" (https://www.youtube.com/watch?v=vIIIau06wGo)
+
+## Anti-disclaimer:
+None of the backend code or text content of our project was auto-generated. The entire research notebook (plus the thousands of lines of scrapped code that were removed by that version) was typed over the course of several months, along with the app.py and all backend and text content.
+
+## Run Locally
 ```bash
-cd Backend
-```
-
-2. Create a Python virtual environment:
-```bash
-python -m venv venv
-```
-
-3. Activate the virtual environment:
-```bash
-# Windows
-venv\Scripts\activate
-
-# Mac/Linux
-source venv/bin/activate
-```
-
-4. Install Python dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-5. Start the Flask server:
-```bash
-python app.py
-```
-
-The backend will run on `http://localhost:5000`
-
-### Frontend Setup
-
-1. Navigate to the frontend directory:
-```bash
-cd Frontend/animal-audio-app
-```
-
-2. Install Node.js dependencies:
-```bash
-npm install
-```
-
-3. Start the development server:
-```bash
-npm run dev
-```
-
-The frontend will run on `http://localhost:3000`
-
-## Usage
-
-1. Start both backend and frontend servers
-2. Open `http://localhost:3000` in your browser
-3. Upload an audio file of an ecosystem recording
-4. Click "Analyze Biodiversity" to process the audio
-5. View results including:
-   - Biodiversity score (0-100%)
-   - Audio spectrogram visualization
-   - Score distribution compared to benchmarks
-   - Ecosystem type classification
-
-## API Endpoints
-
-### POST /analyze
-Upload and analyze audio file
-- **Input**: Multipart form data with 'audio' file
-- **Output**: JSON with biodiversity_score, spectrogram_b64, distribution_data, etc.
-
-### GET /health
-Health check endpoint
-
-### GET /
-API information and available endpoints
-
-## Benchmarks
-
-The system compares recordings against these ecosystem types:
-- **Urban Low** (10%): City centers, heavy traffic
-- **Urban Park** (30%): Parks with some wildlife
-- **Forest Edge** (50%): Transition zones between habitats
-- **Primary Forest** (80%): Established forest ecosystems
-- **Pristine Ecosystem** (95%): Untouched natural habitats
-
-## Technical Details
-
-### Backend
-- **Flask**: Web framework for API endpoints
-- **Librosa**: Audio processing and feature extraction
-- **Matplotlib**: Spectrogram visualization
-- **NumPy/SciPy**: Numerical computations
-- **scikit-maad**: Acoustic diversity calculations
-
-### Frontend
-- **Next.js**: React framework with TypeScript
-- **Tailwind CSS**: Styling and responsive design
-- **Plotly.js**: Interactive data visualization
-- **Axios**: HTTP client for API communication
-
-## Future Enhancements
-
-- Integration of the full ViT model from the notebook
-- Real-time audio recording from microphone
-- Batch processing of multiple files
-- Export analysis results to PDF/CSV
-- Species identification from audio signatures
-- Temporal analysis showing biodiversity changes over time
-
-## Development Notes
-
-The current implementation uses a simplified ADI calculation for demonstration. To integrate the full machine learning model from `ADI_R3_Bioacoustics.ipynb`:
-
-1. Load the trained ViT model in `app.py`
-2. Replace the `calculate_adi()` function with the notebook's `get_prediction_and_heatmap()`
-3. Add proper model file paths and calibration data
-4. Include Grad-CAM visualization for explainable AI results
+git clone https://github.com/dylanberens/Bioacoustics.git
+cd backend
+docker build -t bioacoustics .
+docker run -p 5000:5000 bioacoustics
