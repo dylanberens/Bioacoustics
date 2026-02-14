@@ -12,7 +12,6 @@ import cv2
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import plotly.figure_factory as ff
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from transformers import ASTConfig, ASTForAudioClassification, ASTFeatureExtractor
@@ -22,9 +21,9 @@ app = Flask(__name__)
 CORS(app) # enable CORS for frontend communication
 
 # === 1. CONFIGURATION ===
-# docker container wont have GPU usually, defaulting to cpu is safe
+# docker container wont have GPU usually, defaulting to cpu as is standard
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-CHECKPOINT_PATH = "checkpoints/best_ast_model.pth"
+CHECKPOINT_PATH = "checkpoints/best_ast_model_feb.pth"
 PRETRAINED_MODEL = "MIT/ast-finetuned-audioset-10-10-0.4593"
 SAMPLE_RATE = 16000
 CHUNK_DURATION = 10.24
@@ -48,7 +47,7 @@ class BioAcousticAST(nn.Module):
     # custom regression head
     hidden_size = self.ast.config.hidden_size
 
-    self.classifier = nn.Sequential(
+    self.regressor = nn.Sequential(
         nn.LayerNorm(hidden_size),
         nn.Linear(hidden_size, 256),
         nn.GELU(),
@@ -57,7 +56,7 @@ class BioAcousticAST(nn.Module):
         nn.Sigmoid()
     )
 
-  def forward(self, input_values, labels=None, output_attentions=False):
+  def forward(self, input_values, output_attentions=False):
     # pass thru base transformer
     outputs = self.ast.base_model(input_values, output_attentions=output_attentions)
 
@@ -66,7 +65,7 @@ class BioAcousticAST(nn.Module):
     cls_token = last_hidden_state[:, 0, :]
 
     # pass thru custom head
-    prediction = self.classifier(cls_token)
+    prediction = self.regressor(cls_token)
 
     if output_attentions:
       # prevents "not enough values to unpack" error
@@ -76,7 +75,6 @@ class BioAcousticAST(nn.Module):
     return prediction, None
 
 def generate_attention_rollout(model, input_values):
-  model.eval()
   with torch.no_grad():
     prediction, attentions = model(input_values, output_attentions=True)
 
@@ -88,8 +86,9 @@ def generate_attention_rollout(model, input_values):
       a_map = a_map / a_map.sum(dim=-1, keepdim=True)
       rollout = torch.matmul(rollout, a_map)
     
+    # skip [CLS] & [DIST] tokens to get patch embeddings needed for attention rollout
     cls_attention = rollout[0, 2:]
-    grid_h = 8 # changed from 12 -> 8 to match AST patch size 512 (8 freq bins x 64 time frames)
+    grid_h = 12 # 12 -> 8 -> 12 (stride of 10, overlap of 6 since patch size = 16, so 12 patches)
     grid_w = cls_attention.shape[0] // grid_h
     heatmap = cls_attention[:grid_h*grid_w].reshape(grid_h, grid_w)
 
