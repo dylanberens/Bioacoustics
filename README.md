@@ -10,7 +10,7 @@
 
 ## [**Live Website: https://bioacoustics.vercel.app**](https://bioacoustics.vercel.app)
 
-![Project Demo](https://github.com/user-attachments/assets/6eae24ac-d87b-4f22-94b3-67f175e2e60a)
+![Project Demo](assets/demo.gif)
 
 *(Real-time inference showing biodiversity scoring, spectrogram generation, plotly distribution & XAI heatmap)*
 
@@ -29,7 +29,8 @@ Our team developed an end-to-end ML pipeline for assessing the biodiversity of e
 ---
 
 ## 🚰 Data Pipeline 
-* **Input:** We projected the raw audio waveform (1D) onto a 2D surface as a Mel Audio Spectrogram, representing frequency as the y-axis, time as the x-axis, and amplitude as the coloring of the image. <img width="1029" height="294" alt="spectrogram" src="https://github.com/user-attachments/assets/79d70801-0eb1-4474-9c3f-6eafe18cfd4a" />
+* **Input:** We projected the raw audio waveform (1D) onto a 2D surface as a Mel Audio Spectrogram, representing frequency as the y-axis, time as the x-axis, and amplitude as the coloring of the image.
+![Mel Spectrogram](assets/spectrogram.png)
 * **Target Variable:** We created a custom "Robust Acoustic Diversity Index (ADI)", a calculation derived from the Shannon Entropy across 30 frequency bands.
   * Background Subtraction: removes constant noise (e.g., rain)
   * Adaptive Thresholding: only count sounds >13.5dB above baseline
@@ -51,12 +52,12 @@ Our team developed an end-to-end ML pipeline for assessing the biodiversity of e
   * **Aggregation Logic:** Our method calculates the ADI score for all 6 slices of spectrogram, selects the top 3 scores, and averages them. This was a domain specific choice because an ecosystem is as biodiverse as its most active moments (a panther roar that may only happen once in a 60 second theater of bird sounds and insect drones reflects the true biodiversity "capability" of that ecosystem). We average the top 3 to lower the influence of transient sounds that occur in the upper frequencies but are not biophony (animal sounds)
 * **Loss Function:** Mean Absolute Error (MAE): to not discourage the model for making bold predictions
 * **SpecAugment:** We applied Frequency Masking (horizontal black bars masking Hz ranges) and Temporal Masking (vertical black bars masking time ranges), as a second form of data augmentation, to promote generalizability by further encouraging the model to not rely on particular regions too heavily.
-![SpecAugment Example](https://github.com/user-attachments/assets/fff12cef-3959-40ba-809b-436e6ff4b045)
+![SpecAugment Example](assets/spec_augment.jpg)
 
 ## 🔬 Explainable AI (XAI): Attention Rollout Heatmap
 We implemented Attention Rollout Heatmaps for model interpretability, to be able to explain *why* our model was predicting the way it did. This visualization marks regions of the Spectrogram it sits on top of, indicating regions of the audio file that most heavily influenced the model's prediction.
 
-<img width="1182" height="401" alt="attention_colab_12bins" src="https://github.com/user-attachments/assets/e337bbb8-9489-4c0a-b16f-053ad565dc2d" />
+![Attention Rollout](assets/attention_rollout.png)
 
 *(It's worth noting early versions of this project resulted in attention heatmaps with broad regions marked; the sparse, targeted marks on our current attention rollout heatmaps are indicative of a confident model that knows where to look to assess biodiversity, which aligns with the 0.95 R² of our final AST model.)*
 
