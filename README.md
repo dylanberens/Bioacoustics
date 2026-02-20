@@ -17,7 +17,7 @@
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 ### 🏆 1st Place - AI & Data Science Showcase 
-**(University of Houston, HPE-Data Science Institute) - Fall 2025**
+***University of Houston | HPE-Data Science Institute - Fall 2025***
 
 Our team developed an end-to-end ML pipeline for assessing the biodiversity of ecosystems using only the audio signal as input to a custom Audio Spectrogram Transformer (AST).
 
@@ -31,10 +31,12 @@ Our team developed an end-to-end ML pipeline for assessing the biodiversity of e
 ## 🚰 Data Pipeline 
 * **Input:** We projected the raw audio waveform (1D) onto a 2D surface as a Mel Audio Spectrogram, representing frequency as the y-axis, time as the x-axis, and amplitude as the coloring of the image.
 ![Mel Spectrogram](assets/spectrogram.png)
-* **Target Variable:** We created a custom "Robust Acoustic Diversity Index (ADI)", a calculation derived from the Shannon Entropy across 30 frequency bands.
-  * Background Subtraction: removes constant noise (e.g., rain)
-  * Adaptive Thresholding: only count sounds >13.5dB above baseline
-  * Soft Fallback: assigns a fractional score based on energy sum if nothing >13.5 dB
+* **Target Variable:** We created our custom "Robust Acoustic Diversity Index (ADI)", a calculation derived from the Shannon Entropy across 30 frequency bands.
+  * **Background Subtraction:** removes constant noise (like rain or rivers) by subtracting the median energy across the spectrogram
+  * **Adaptive Thresholding:** only count sounds >13.5dB above baseline
+  * **Frequency Banding:** splits the spectrogram into 30 vertically stacked 200Hz frequency bands
+  * **Shannon Entropy:** measures the evenness of activity across the 30 bands to reward diverse ecosystems with different frequencies
+  * **Soft Fallback:** assigns a fractional score based on energy sum if nothing >13.5 dB, to discourage flat 0 scores
 * **Dataset:** [Kaggle RFCx Species Audio Detection](https://www.kaggle.com/competitions/rfcx-species-audio-detection/data)
 * **Model:** A pre-trained HuggingFace Audio Spectrogram Transformer (AST) with a 3 layer custom regression head.
   * Sequential Transfer Learning: ViT-base (ImageNet) -> AST  (AudioSet) -> Our Custom Model (Rainforest Bioacoustics)
@@ -58,7 +60,7 @@ We implemented Attention Rollout Heatmaps for model interpretability, to be able
 
 ![Attention Rollout](assets/attention_rollout.png)
 
-*(It's worth noting early versions of this project resulted in attention heatmaps with broad regions marked; the sparse, targeted marks on our current attention rollout heatmaps are indicative of a confident model that knows where to look to assess biodiversity, which aligns with the 0.95 R² of our final AST model.)*
+*(It's worth noting early versions of this project resulted in attention heatmaps with broad regions colored; the sparse, targeted marks on our current attention rollout heatmaps are indicative of a confident model that knows where to look to assess biodiversity, which aligns with the 0.95 R² of our final AST model.)*
 
 ---
 
@@ -75,7 +77,7 @@ We implemented Attention Rollout Heatmaps for model interpretability, to be able
 
 **Dr. Nouhad Rizk** for her mentoring and leadership! Not only did you teach my two favorite classes by far in all of undergrad (Data Science I & Data Science II), but your active involvement in getting students engaged on campus (creating numerous clubs, encouraging classroom participation, hosting university-wide data science events) is huge. 
 
-**Drew Purves** appearance on Google DeepMind: The Podcast with Hannah Fry heavily inspired the topic of our team's project. "The Nature of AI: solving the planet's data gap" (https://www.youtube.com/watch?v=vIIIau06wGo)
+**Drew Purves**' appearance on Google DeepMind: The Podcast with Hannah Fry heavily inspired the topic of our team's project. "The Nature of AI: solving the planet's data gap" (https://www.youtube.com/watch?v=vIIIau06wGo)
 
 ## Anti-disclaimer:
 None of the backend code or text content of our project was auto-generated. The entire research notebook (plus the thousands of lines of scrapped code that were removed by that version) was typed over the course of several months, along with the app.py and all backend and text content.
