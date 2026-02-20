@@ -227,6 +227,13 @@ def analyze():
         "status": "success"
     })
   
+  except Exception as e:
+    print(f"❌ Analysis error: {str(e)}")
+    return jsonify({
+      "error": "ok i did NOT like that: The file may be corrupted, too short, or in an unsupported format.",
+      "status": "error"
+    }), 500
+  
   finally:
     for p in [input_path, processed_path]:
       if os.path.exists(p):

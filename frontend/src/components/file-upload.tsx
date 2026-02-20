@@ -1,0 +1,181 @@
+"use client";
+import { cn } from "../lib/utils";
+import { useRef, useState } from "react";
+import { motion } from "framer-motion";
+// import { IconUpload } from "@tabler/icons-react";
+import { useDropzone } from "react-dropzone";
+
+export const FileUpload = ({
+  onChange,
+  onError,
+}: {
+  onChange?: (files: File[]) => void;
+  onError?: (message: string) => void;
+}) => {
+  const [files, setFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (newFiles: File[]) => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    setFiles(newFiles);
+    onChange && onChange(newFiles);
+  };
+
+  const handleClick = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    fileInputRef.current?.click();
+  };
+
+  const handleContainerClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const { getRootProps } = useDropzone({
+    multiple: false,
+    noClick: true,
+    maxSize: 50 * 1024 * 1024, // 50MB limit
+    accept: {
+      'audio/*': ['.wav', '.mp3', '.flac', '.m4a', '.ogg', '.webm', '.aif', '.aiff', '.opus', '.wma', '.caf'],
+      'video/webm': ['.webm'],
+      // fallback added by Dylan
+      'application/octet-stream': ['.wav', '.flac', '.aif', '.aiff']
+    },
+    onDrop: handleFileChange,
+    onDropRejected: (fileRejections) => {
+      // to log why a file was ignored by console
+      fileRejections.forEach(({ file, errors }) => {
+        console.log(`❌ File rejected: ${file.name}`, errors);
+        const isTooLarge = errors.some(e => e.code === 'file-too-large');
+        const message = isTooLarge
+          ? `File "${file.name}" exceeds the 50MB size limit.`
+          : `File "${file.name}" is not a supported audio format.`;
+        onError?.(message);
+      })
+    },
+  });
+
+  return (
+    <div className="w-full" {...getRootProps()}>
+      <motion.div
+        onClick={handleContainerClick}
+        whileHover="animate"
+        className="p-10 group/file block rounded-lg cursor-pointer w-full relative overflow-hidden"
+      >
+        <input
+          ref={fileInputRef}
+          id="file-upload-handle"
+          type="file"
+          accept=".wav,.mp3,.flac,.m4a,.ogg,.webm,.aif,.aiff,.opus,.wma,.caf,audio/*,video/webm"
+          onChange={(e) => handleFileChange(Array.from(e.target.files || []))}
+          className="hidden"
+        />
+        <div className="absolute inset-0 [mask-image:radial-gradient(ellipse_at_center,white,transparent)]">
+          <GridPattern />
+        </div>
+        <div className="flex flex-col items-center justify-center">
+          <p className="relative z-20 font-sans font-bold text-base mb-6" style={{ color: 'white' }}>
+            Upload audio file
+          </p>
+          
+          {/* Spotify-Style Choose File Button */}
+          <button
+            onClick={handleClick}
+            className="rounded-full bg-[#10B981] font-normal text-white tracking-normal uppercase transform hover:scale-105 hover:bg-[#34D399] transition-colors duration-200 flex items-center justify-center space-x-2 mb-6 text-sm"
+            style={{
+              paddingLeft: '16px',
+              paddingRight: '16px',
+              paddingTop: '8px',
+              paddingBottom: '8px'
+            }}
+          >
+            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+            </svg>
+            <span className="text-sm font-normal">SELECT AUDIO FILE</span>
+          </button>
+          
+          <p className="relative z-20 font-sans font-normal text-sm" style={{ color: 'white' }}>
+            Or drag and drop your ecosystem audio recording here
+          </p>
+          <div className="relative w-full mt-10 max-w-xl mx-auto">
+            {files.length > 0 &&
+              files.map((file, idx) => (
+                <motion.div
+                  key={"file" + idx}
+                  layoutId={idx === 0 ? "file-upload" : "file-upload-" + idx}
+                  className={cn(
+                    "relative overflow-hidden z-40 bg-white dark:bg-neutral-900 flex flex-col items-start justify-start md:h-24 p-4 mt-4 w-full mx-auto rounded-md",
+                    "shadow-sm"
+                  )}
+                >
+                  <div className="flex justify-between w-full items-center gap-4">
+                    <motion.p
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      layout
+                      className="text-base truncate max-w-xs" style={{ color: 'white' }}
+                    >
+                      {file.name}
+                    </motion.p>
+                    <motion.p
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      layout
+                      className="rounded-lg px-2 py-1 w-fit flex-shrink-0 text-sm bg-neutral-800 text-white shadow-input"
+                    >
+                      {(file.size / (1024 * 1024)).toFixed(2)} MB
+                    </motion.p>
+                  </div>
+
+                  <div className="flex text-sm md:flex-row flex-col items-start md:items-center w-full mt-2 justify-between" style={{ color: 'white' }}>
+                    <motion.p
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      layout
+                      className="px-1 py-0.5 rounded-md bg-neutral-800 text-white"
+                    >
+                      {file.type}
+                    </motion.p>
+
+                    <motion.p
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      layout
+                    >
+                      modified {new Date(file.lastModified).toLocaleDateString()}
+                    </motion.p>
+                  </div>
+                </motion.div>
+              ))}
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
+export function GridPattern() {
+  const columns = 41;
+  const rows = 11;
+  return (
+    <div className="flex bg-gray-100 dark:bg-neutral-900 flex-shrink-0 flex-wrap justify-center items-center gap-x-px gap-y-px scale-105">
+      {Array.from({ length: rows }).map((_, row) =>
+        Array.from({ length: columns }).map((_, col) => {
+          const index = row * columns + col;
+          return (
+            <div
+              key={`${col}-${row}`}
+              className={`w-10 h-10 flex flex-shrink-0 rounded-[2px] ${
+                index % 2 === 0
+                  ? "bg-gray-50 dark:bg-neutral-950"
+                  : "bg-gray-50 dark:bg-neutral-950 shadow-[0px_0px_0px_3px_rgba(255,255,255,1)_inset] dark:shadow-[0px_0px_0px_3px_rgba(0,0,0,1)_inset]"
+              }`}
+            />
+          );
+        })
+      )}
+    </div>
+  );
+}
