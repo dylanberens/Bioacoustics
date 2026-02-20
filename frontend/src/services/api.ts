@@ -171,10 +171,10 @@ class BiodiversityApiService {
    * Validate audio file before upload
    */
   private validateAudioFile(file: File): void {
-    // Check file size (50MB limit)
-    const maxSizeBytes = 50 * 1024 * 1024;
+    // Check file size (25MB limit)
+    const maxSizeBytes = 25 * 1024 * 1024;
     if (file.size > maxSizeBytes) {
-      throw new Error(`File size must be less than 50MB. Current size: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+      throw new Error(`File size must be less than 25MB. Current size: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
     }
 
     // Check file type

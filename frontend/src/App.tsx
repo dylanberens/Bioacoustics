@@ -72,8 +72,8 @@ function App() {
         return;
       }
       
-      // Check file size (50MB limit)
-      if (file.size > 50 * 1024 * 1024) {
+      // Check file size (25MB limit)
+      if (file.size > 25 * 1024 * 1024) {
         setError('File size must be less than 50MB');
         return;
       }

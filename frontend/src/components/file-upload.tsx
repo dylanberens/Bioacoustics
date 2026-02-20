@@ -35,7 +35,7 @@ export const FileUpload = ({
   const { getRootProps } = useDropzone({
     multiple: false,
     noClick: true,
-    maxSize: 50 * 1024 * 1024, // 50MB limit
+    maxSize: 25 * 1024 * 1024, // 25MB limit
     accept: {
       'audio/*': ['.wav', '.mp3', '.flac', '.m4a', '.ogg', '.webm', '.aif', '.aiff', '.opus', '.wma', '.caf'],
       'video/webm': ['.webm'],
@@ -49,7 +49,7 @@ export const FileUpload = ({
         console.log(`❌ File rejected: ${file.name}`, errors);
         const isTooLarge = errors.some(e => e.code === 'file-too-large');
         const message = isTooLarge
-          ? `File "${file.name}" exceeds the 50MB size limit.`
+          ? `File "${file.name}" exceeds the 25MB size limit.`
           : `File "${file.name}" is not a supported audio format.`;
         onError?.(message);
       })
@@ -97,7 +97,7 @@ export const FileUpload = ({
           </button>
           
           <p className="relative z-20 font-sans font-normal text-sm" style={{ color: 'white' }}>
-            Or drag and drop your ecosystem audio recording here
+            Or drag and drop your audio file here (less than 25MB)
           </p>
           <div className="relative w-full mt-10 max-w-xl mx-auto">
             {files.length > 0 &&
