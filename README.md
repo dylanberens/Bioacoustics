@@ -79,6 +79,13 @@ We implemented Attention Rollout Heatmaps for model interpretability, to be able
 
 **Drew Purves**' appearance on Google DeepMind: The Podcast with Hannah Fry heavily inspired the topic of our team's project. "The Nature of AI: solving the planet's data gap" (https://www.youtube.com/watch?v=vIIIau06wGo)
 
+## Future Improvements:
+ * **Validation Against Ecological Truth:** The clear limitation of the current target variable is that it is a calculation based strictly on the contents of the spectrogram, and would be stronger if validated based on biologist-labeled ground truths. Given our dataset does not include labeled information for non-avian and non-amphibian species, our decision to use our Robust ADI target was necessary, but would promote stronger generalization if ground truth labels were reliably encoded into the regression target.
+ * **Confidence Interval Bounding:** Our project is intentionally framed as a regression problem for user interpretability. However, reframing the output as a bounded range of possible scores (e.g., 0.71-0.84 rather than 0.79) would make the output more accurate and transparent by communicating the predictive nature of the score rather than implying exactness.
+ * **Expanded Dataset:** Our training data is heavily skewed towards highly biodiverse soundscapes (Amazon Rainforest dataset), with only a small fraction of anchor files of non-biophony. By expanding our dataset to include degraded environments (e.g., deforested regions) and soundscapes from different regions (tropical, tundra, etc), our calibration pass and calculated ADI "labels" would be better at differentiating low biodiversity soundscapes by having a more comprehensive scope of ecosystem states.
+ * **Composite Soundscape Target Variable:** We explored many different target variables including species count, Acoustic Complexity Index (ACI), Normalized Difference Soundscape Index (NDSI) and 4 different variants of ADI. Although we evaluated these individually, mathematically combining our Robust ADI with ACI and NDSI would likely produce a more ecologically grounded self-supervised target variable.
+ * **Real Time Edge Deployment:** Deploying Raspberry Pis with the containerized backend across remote ecosystems in Costa Rica, Sundaland and the Arctic.
+
 ## Anti-disclaimer:
 None of the backend code or text content of our project was auto-generated. The entire research notebook (plus the thousands of lines of scrapped code that were removed by that version) was typed over the course of several months, along with the app.py and all backend and text content.
 
