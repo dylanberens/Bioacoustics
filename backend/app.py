@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from transformers import ASTConfig, ASTForAudioClassification, ASTFeatureExtractor
+from google.cloud import storage
 
 # initialize flask app
 app = Flask(__name__)
@@ -88,7 +89,7 @@ def generate_attention_rollout(model, input_values):
     
     # skip [CLS] & [DIST] tokens to get patch embeddings needed for attention rollout
     cls_attention = rollout[0, 2:]
-    grid_h = 12 # 12 -> 8 -> 12 (stride of 10, overlap of 6 since patch size = 16, so 12 patches)
+    grid_h = 12 # (stride of 10, overlap of 6 since patch size = 16, so 12 patches)
     grid_w = cls_attention.shape[0] // grid_h
     heatmap = cls_attention[:grid_h*grid_w].reshape(grid_h, grid_w)
 
@@ -142,16 +143,8 @@ def run_full_analysis(file_path, model, feature_extractor):
     input_values = inputs['input_values'].to(DEVICE)
     
     with torch.no_grad():
-      #pred, _ = model(input_values)
-      # altered safe handling in case mismatch in unpack
-      outputs = model(input_values)
-      pred = outputs.logits if hasattr(outputs, 'logits') else outputs
-      
-      #score = pred.item()
-      if isinstance(pred, tuple):
-        score = pred[0].item()
-      else:
-        score = pred.item()
+      prediction, _ = model(input_values)
+      score = prediction.item()
       raw_heatmap = generate_attention_rollout(model, input_values)
 
     chunk_scores.append(score)
@@ -166,9 +159,13 @@ def run_full_analysis(file_path, model, feature_extractor):
   spec = librosa.feature.melspectrogram(y=audio_full, sr=SAMPLE_RATE, fmax=8000)
   spec_db = librosa.power_to_db(spec, ref=np.max)
 
+  # 60s file fits 5 complete 10.24s chunks (6th would exceed bounds)
+  heatmap_duration = len(heatmaps) * CHUNK_DURATION # 5 * 10.24 = 51.2
+  
   # 1. Base spectrogram
   fig, ax = plt.subplots(figsize=(12, 3))
   librosa.display.specshow(spec_db, sr=SAMPLE_RATE, x_axis='time', y_axis='mel', fmax=8000, ax=ax, cmap='magma', zorder=1)
+  ax.set_xlim(0, heatmap_duration) # only show the 51.2s the model actually analyzes during inference
   buf = io.BytesIO()
   plt.savefig(buf, format='png', bbox_inches='tight')
   spec_b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
@@ -177,8 +174,29 @@ def run_full_analysis(file_path, model, feature_extractor):
   # 2. heatmap overlay
   fig, ax = plt.subplots(figsize=(12, 3))
   librosa.display.specshow(spec_db, sr=SAMPLE_RATE, x_axis='time', y_axis='mel', fmax=8000, ax=ax, cmap='gray', zorder=1)
-  heatmap_resized = cv2.resize(full_heatmap, (spec_db.shape[1], spec_db.shape[0]))
-  ax.imshow(heatmap_resized, cmap='jet', alpha=0.5, aspect='auto', extent=[0, len(audio_full)/sr, 0, 8000], origin='lower', zorder=10)
+
+  ax.set_xlim(0, heatmap_duration) # only show the 51.2s the model actually analyzes during inference
+
+  # A. calculate exact number of spectrogram frames using actual audio duration
+  actual_audio_duration = len(audio_full) / SAMPLE_RATE
+  frames_to_keep = int(spec_db.shape[1] * (heatmap_duration / actual_audio_duration))
+
+  # B. resize heatmap to exactly match the target mel spectrogram dimensions (analyzed_frames x 128 mel bins)
+  heatmap_resized = cv2.resize(full_heatmap, (frames_to_keep, spec_db.shape[0]))
+
+  # C. plot using librosas specshow, use y_axis mel for exact same log warping to heatmap as was used for background
+  librosa.display.specshow(
+    heatmap_resized,
+    sr=SAMPLE_RATE,
+    x_axis='time',
+    y_axis='mel',
+    fmax=8000,
+    ax=ax,
+    cmap='jet',
+    alpha=0.55,
+    zorder=10
+  )
+  
   buf = io.BytesIO()
   plt.savefig(buf, format='png', bbox_inches='tight')
   heat_b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
@@ -239,8 +257,24 @@ def analyze():
       if os.path.exists(p):
         os.remove(p)
 
+def download_model(bucket_name, blob_name, local_path):
+  if not os.path.exists(local_path):
+    print(f"Downloading model from GCS: {bucket_name}/{blob_name}")
+    client = storage.Client()
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(blob_name)
+    os.makedirs(os.path.dirname(local_path), exist_ok=True)
+    blob.download_to_filename(local_path)
+    print("Model downloaded successfully")
+  else:
+    print("Model already cached locally, skipping download")
+
+GCS_BUCKET = "bioacoustics-models"
+GCS_BLOB = "best_ast_model_feb.pth"
+
 print("Loading Audio Spectrogram Transformer (AST) . . .")
 feature_extractor = ASTFeatureExtractor.from_pretrained(PRETRAINED_MODEL)
+download_model(GCS_BUCKET, GCS_BLOB, CHECKPOINT_PATH)
 model = BioAcousticAST(PRETRAINED_MODEL).to(DEVICE)
 if os.path.exists(CHECKPOINT_PATH):
   model.load_state_dict(torch.load(CHECKPOINT_PATH, map_location=DEVICE))
