@@ -59,7 +59,7 @@ Species use sounds to communicate, and thereby evolved to occupy different frequ
 ![SpecAugment Example](assets/spec_augment.jpg)
 
 ## 🔬 Explainable AI (XAI): Attention Rollout Heatmap
-We implemented Attention Rollout Heatmaps for model interpretability, to be able to explain *why* our model was predicting the way it did. This visualization marks regions of the Spectrogram it sits on top of, indicating regions of the audio file that most heavily influenced the model's prediction.
+We implemented Attention Rollout Heatmaps for model interpretability, to be able to explain *why* our model was predicting the way it did. This visualization marks regions of the Spectrogram it sits on top of, indicating regions of the audio file that most heavily influenced the model's prediction. (Red/Yellow = high influence on model's prediction)
 
 ![Attention Rollout](assets/attention_rollout.png)
 
