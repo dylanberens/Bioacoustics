@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from transformers import ASTConfig, ASTForAudioClassification, ASTFeatureExtractor
-from google.cloud import storage
+import urllib.request
 
 # initialize flask app
 app = Flask(__name__)
@@ -257,24 +257,20 @@ def analyze():
       if os.path.exists(p):
         os.remove(p)
 
-def download_model(bucket_name, blob_name, local_path):
+def download_model(public_url, local_path):
   if not os.path.exists(local_path):
-    print(f"Downloading model from GCS: {bucket_name}/{blob_name}")
-    client = storage.Client()
-    bucket = client.bucket(bucket_name)
-    blob = bucket.blob(blob_name)
+    print(f"Downloading models from public storage . . .")
     os.makedirs(os.path.dirname(local_path), exist_ok=True)
-    blob.download_to_filename(local_path)
-    print("Model downloaded successfully")
+    urllib.request.urlretrieve(public_url, local_path)
+    print("Model downloaded sucessfully, huge dub")
   else:
     print("Model already cached locally, skipping download")
-
-GCS_BUCKET = "bioacoustics-models"
-GCS_BLOB = "best_ast_model_feb.pth"
+  
+MODEL_URL = "https://storage.googleapis.com/bioacoustics-models/best_ast_model_feb.pth"
 
 print("Loading Audio Spectrogram Transformer (AST) . . .")
 feature_extractor = ASTFeatureExtractor.from_pretrained(PRETRAINED_MODEL)
-download_model(GCS_BUCKET, GCS_BLOB, CHECKPOINT_PATH)
+download_model(MODEL_URL, CHECKPOINT_PATH)
 model = BioAcousticAST(PRETRAINED_MODEL).to(DEVICE)
 if os.path.exists(CHECKPOINT_PATH):
   model.load_state_dict(torch.load(CHECKPOINT_PATH, map_location=DEVICE))

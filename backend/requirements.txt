@@ -10,4 +10,3 @@ gunicorn==21.2.0
 matplotlib==3.8.0
 opencv-python-headless==4.8.1.78
 plotly==5.18.0
-google-cloud-storage
