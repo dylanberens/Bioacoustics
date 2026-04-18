@@ -34,7 +34,7 @@ Species use sounds to communicate, and thereby evolved to occupy different frequ
 ## 🚰 Data Pipeline 
 * **Input:** We projected the raw audio waveform (1D) onto a 2D surface as a Mel Audio Spectrogram, representing frequency as the y-axis, time as the x-axis, and amplitude as the coloring of the image.
 ![Mel Spectrogram](assets/spectrogram.png)
-* **Target Variable:** We created our custom "Robust Acoustic Diversity Index (ADI)", a calculation derived from the Shannon Entropy across 35 frequency bands.
+* **Target Variable:** We created our custom "Robust Acoustic Diversity Index (R-ADI)", a calculation derived from the Shannon Entropy across 35 frequency bands.
   * **Background Subtraction:** removes constant noise (like rain or rivers) by subtracting the median energy across the spectrogram
   * **Adaptive Thresholding:** only count sounds >13.5dB above baseline
   * **Frequency Banding:** splits the spectrogram into 35 vertically stacked 200Hz frequency bands
@@ -87,7 +87,6 @@ We implemented Attention Rollout Heatmaps for model interpretability, to be able
  * **Confidence Interval Bounding:** Our project is intentionally framed as a regression problem for user interpretability. However, reframing the output as a bounded range of possible scores (e.g., 0.71-0.84 rather than 0.79) would make the output more accurate and transparent by communicating the predictive nature of the score rather than implying exactness.
  * **Expanded Dataset:** Our training data is heavily skewed towards highly biodiverse soundscapes (Amazon Rainforest dataset), with only a small fraction of anchor files of non-biophony. By expanding our dataset to include degraded environments (e.g., deforested regions) and soundscapes from different regions (tropical, tundra, etc), our calibration pass and calculated ADI "labels" would be better at differentiating low biodiversity soundscapes by having a more comprehensive scope of ecosystem states.
  * **Model Quantization (& Distillation):** By reducing the floating point precision of the weights of our heavy model (347MB) from float32 to float16 or less, we would be able to decrease the size of our model considerably, lowering storage costs and decreasing inference time, with a likely minimal decrease in R². A longer term improvement would be training a second, much smaller model to approximate the prediction of our current model and the actual ADI score; this would reduce model size and storage costs even further, but requires architecting and training another model.
- * **Composite Soundscape Target Variable:** We explored many different target variables including species count, Acoustic Complexity Index (ACI), Normalized Difference Soundscape Index (NDSI) and 4 different variants of ADI. Although we evaluated these individually, mathematically combining our Robust ADI with ACI and NDSI would likely produce a more ecologically grounded self-supervised target variable.
  * **Real Time Edge Deployment:** Deploying Raspberry Pis with a containerized, distilled model backend across remote ecosystems in Costa Rica, Sundaland and the Arctic.
 
 ## Anti-disclaimer
