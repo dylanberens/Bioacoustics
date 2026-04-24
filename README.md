@@ -27,7 +27,7 @@ Our team developed an end-to-end ML pipeline for assessing the biodiversity of e
 * **Shruthi Yenamagandla** (CNN Architect)
 
 ##  🌱 Theory
-Species use sounds to communicate, and thereby evolved to occupy different frequency niches in the overall "soundscape". The acoustic signature of a biodiverse ecosystem therefore is distributed activity across many frequency bands.
+Species use sounds to communicate, so they evolved to occupy different frequency niches in the overall "soundscape". As a result, the acoustic signature of a biodiverse ecosystem is distributed (and varied) activity across many frequency bands.
 
 ---
 
