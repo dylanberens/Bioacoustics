@@ -41,7 +41,7 @@ Species use sounds to communicate, so they evolved to occupy different frequency
   * **Shannon Entropy:** measures the evenness of activity across the 35 bands to reward diverse ecosystems with different frequencies
   * **Soft Fallback:** assigns a fractional score based on energy sum if nothing >13.5 dB, to discourage flat 0 scores
 * **Dataset:** [Kaggle RFCx Species Audio Detection](https://www.kaggle.com/competitions/rfcx-species-audio-detection/data)
-* **Model:** A pre-trained HuggingFace Audio Spectrogram Transformer (AST) with a 3 layer custom regression head.
+* **Model:** A pre-trained Hugging Face Audio Spectrogram Transformer (AST) with a 3 layer custom regression head.
   * Sequential Transfer Learning: ViT-base (ImageNet) -> AST  (AudioSet) -> Our Custom Model (Rainforest Bioacoustics)
   * Scale: ~86.6M parameters, 101 layers
 * **Libraries:** PyTorch | TensorFlow | HuggingFace | Librosa | NumPy | Pandas | Plotly | Torchaudio | FFmpeg | Matplotlib | OpenCV
@@ -73,6 +73,7 @@ We implemented Attention Rollout Heatmaps for model interpretability, to be able
 * **Containerization (Docker):** Our inference backend is fully containerized, handling complex dependencies and allowing reproducibility across coding environments
 * **Google Cloud Run:** We deployed our containerized backend on Google Cloud to allow our website to run 24/7 (and autoscale based on traffic) without manually running our original Colab notebook
 * **Frontend (Vercel):** Our website and frontend is hosted on Vercel and is a React/TypeScript dashboard for real-time inference and visualization that is live and runs 24/7
+* **Model Optimization (PTQ & Cold Starts):** Achieved a 73.9% reduction in model size (347MB -> 91MB) using INT8 Post-Training Quantization, trading a minimal decrease in predictive accuracy (R² 0.95 -> 0.93) for a massive improvement in inference efficiency. We then decoupled our Hugging Face model's architecture initialization from the default weights, bypassing a 340MB network download during container cold-starts. Together these changes allowed us to reduce our deployment memory tier (4Gi -> 3Gi), shave 3-5 seconds off our cold-start latency, decrease GCP bucket storage costs, and crucially will enable our future improvement of real-time edge deployment on a Raspberry Pi.
 
 ---
 
@@ -86,7 +87,7 @@ We implemented Attention Rollout Heatmaps for model interpretability, to be able
  * **Validation Against Ecological Truth:** The clear limitation of the current target variable is that it is a calculation based strictly on the contents of the spectrogram, and would be stronger if validated based on biologist-labeled ground truths. Given our dataset does not include labeled information for non-avian and non-amphibian species, our decision to use our Robust ADI target was necessary, but would promote stronger generalization if ground truth labels were reliably encoded into the regression target.
  * **Confidence Interval Bounding:** Our project is intentionally framed as a regression problem for user interpretability. However, reframing the output as a bounded range of possible scores (e.g., 0.71-0.84 rather than 0.79) would make the output more accurate and transparent by communicating the predictive nature of the score rather than implying exactness.
  * **Expanded Dataset:** Our training data is heavily skewed towards highly biodiverse soundscapes (Amazon Rainforest dataset), with only a small fraction of anchor files of non-biophony. By expanding our dataset to include degraded environments (e.g., deforested regions) and soundscapes from different regions (tropical, tundra, etc), our calibration pass and calculated ADI "labels" would be better at differentiating low biodiversity soundscapes by having a more comprehensive scope of ecosystem states.
- * **Model Quantization (& Distillation):** By reducing the floating point precision of the weights of our heavy model (347MB) from float32 to float16 or less, we would be able to decrease the size of our model considerably, lowering storage costs and decreasing inference time, with a likely minimal decrease in R². A longer term improvement would be training a second, much smaller model to approximate the prediction of our current model and the actual ADI score; this would reduce model size and storage costs even further, but requires architecting and training another model.
+ * **Model Distillation:** While we successfully compressed our core model by reducing its weight precision from float32 to INT8, a longer term improvement is Model Distillation-- training a second, much smaller model to approximate the prediction of our current model and the actual ADI score. This would reduce model size and storage costs even further, but requires architecting and training another model.
  * **Real Time Edge Deployment:** Deploying Raspberry Pis with a containerized, distilled model backend across remote ecosystems in Costa Rica, Sundaland and the Arctic.
 
 ## Anti-disclaimer
