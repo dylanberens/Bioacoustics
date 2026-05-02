@@ -22,8 +22,6 @@ app = Flask(__name__)
 CORS(app) # enable CORS for frontend communication
 
 # === 1. CONFIGURATION ===
-# docker container wont have GPU usually, defaulting to cpu as is standard
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CHECKPOINT_PATH = "checkpoints/best_ast_model_feb.pth"
 PRETRAINED_MODEL = "MIT/ast-finetuned-audioset-10-10-0.4593"
 SAMPLE_RATE = 16000
@@ -38,12 +36,13 @@ class BioAcousticAST(nn.Module):
   def __init__(self, pretrained_model_name):
     super(BioAcousticAST, self).__init__()
 
-    # pretrained body
-    self.ast = ASTForAudioClassification.from_pretrained(
-        pretrained_model_name,
-        ignore_mismatched_sizes=True,
-        attn_implementation="eager" # required for attention rollout
-    )
+    # 1 download only config json, not weights-- eliminate 300MB of downloading that is thrown away
+    config = ASTConfig.from_pretrained(pretrained_model_name)
+    config.ignore_mismatched_sizes = True
+    config._attn_implementation = "eager" # required for attention rollout, hidden attribute- needs leading _ to bypass SDPA default
+
+    # 2. build empty skeleton with random initialization
+    self.ast = ASTForAudioClassification(config)
 
     # custom regression head
     hidden_size = self.ast.config.hidden_size
@@ -237,7 +236,7 @@ def analyze():
         "adi_score": score,
         "biodiversity_score": score,
         "spectrogram_b64": spec_b64,
-        "gradcam_b64": heat_b64, # named gradcam just to amtch Frontend
+        "gradcam_b64": heat_b64, # named gradcam just to match Frontend
         "distribution_data": dist_json,
         "duration": round(duration, 2),
         "file_size_mb": round(os.path.getsize(processed_path) / (1024 * 1024), 2), # in MB
@@ -262,19 +261,44 @@ def download_model(public_url, local_path):
     print(f"Downloading models from public storage . . .")
     os.makedirs(os.path.dirname(local_path), exist_ok=True)
     urllib.request.urlretrieve(public_url, local_path)
-    print("Model downloaded sucessfully, huge dub")
+    print("Model downloaded successfully, huge dub")
   else:
     print("Model already cached locally, skipping download")
   
-MODEL_URL = "https://storage.googleapis.com/bioacoustics-models/best_ast_model_feb.pth"
+# ===== QUANTIZATION CONFIG =====
+# auto detect engine based on architecture to prevent NoQEngine error locally/on cloud
+if torch.backends.quantized.supported_engines == ['qnnpack']:
+  torch.backends.quantized.engine = 'qnnpack'
+elif 'fbgemm' in torch.backends.quantized.supported_engines:
+  torch.backends.quantized.engine = 'fbgemm'
+
+# 1. force cpu for standard quantized inference
+DEVICE = torch.device("cpu")
+
+MODEL_URL = "https://storage.googleapis.com/bioacoustics-models/quantized_ast_int8.pth"
+CHECKPOINT_PATH = "checkpoints/quantized_ast_int8.pth"
 
 print("Loading Audio Spectrogram Transformer (AST) . . .")
 feature_extractor = ASTFeatureExtractor.from_pretrained(PRETRAINED_MODEL)
+
 download_model(MODEL_URL, CHECKPOINT_PATH)
+
+# 2. initialize the base float32 architecture
 model = BioAcousticAST(PRETRAINED_MODEL).to(DEVICE)
+
+# 3. mutate architecture to accept INT8 weights
+model = torch.quantization.quantize_dynamic(
+  model,
+  {nn.Linear},
+  dtype=torch.qint8
+)
+
+# 4. load the quantized weights
 if os.path.exists(CHECKPOINT_PATH):
   model.load_state_dict(torch.load(CHECKPOINT_PATH, map_location=DEVICE))
+
 model.eval()
+print("Quantized INT8 model loaded and ready to go")
 
 if __name__ == '__main__':
   #app.run(host='0.0.0.0', port=5000)
