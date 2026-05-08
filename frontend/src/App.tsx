@@ -557,6 +557,17 @@ function App() {
                   }}>
                     ADI SCORE: <span style={{ color: '#10B981' }}>{analysisResult.adi_score.toFixed(3)}</span>
                   </p>
+                  {/* NEW: 95% Confidence Interval */}
+                  {analysisResult.confidence_interval && (
+                    <p style={{
+                      fontSize: 'clamp(0.9rem, 1.8vw, 1.1rem)',
+                      color: '#9CA3AF',
+                      marginTop: '0.25rem',
+                      fontFamily: 'monospace'
+                    }}>
+                      95% CI: [{analysisResult.confidence_interval[0].toFixed(3)} - {analysisResult.confidence_interval[1].toFixed(3)}]
+                      </p>
+                  )}
                   <p style={{
                     fontSize: 'clamp(1rem, 2vw, 1.2rem)',
                     color: '#D1D5DB',

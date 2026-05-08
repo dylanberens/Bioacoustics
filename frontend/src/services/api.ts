@@ -21,6 +21,7 @@ export interface BiodiversityAnalysisResult {
   adi_score: number;
   spectrogram_b64: string;
   gradcam_b64?: string; // Optional since it's new
+  confidence_interval?: [number, number]; // optional so old payloads dont crash
   distribution_data: {
     histogram: {
       x: number[];

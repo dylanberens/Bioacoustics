@@ -128,13 +128,20 @@ def get_distribution_json(user_score):
     ]
   }
 
+def enable_mc_dropout(model):
+  for m in model.modules():
+    if m.__class__.__name__.startswith('Dropout'):
+      m.train()
+
 # ===== 3. PREDICTION PIPELINE =====
 def run_full_analysis(file_path, model, feature_extractor):
   audio_full, sr = librosa.load(file_path, sr=SAMPLE_RATE, duration=MAX_TOTAL_DURATION_SECONDS)
   samples_per_chunk = int(SAMPLE_RATE * CHUNK_DURATION)
 
   chunk_scores = []
+  chunk_stds = [] # track variance for interval
   heatmaps = []
+
   # sliding window (non-overlapping for speed)
   for start in range(0, len(audio_full) - samples_per_chunk + 1, samples_per_chunk):
     chunk = audio_full[start : start + samples_per_chunk]
@@ -142,14 +149,30 @@ def run_full_analysis(file_path, model, feature_extractor):
     input_values = inputs['input_values'].to(DEVICE)
     
     with torch.no_grad():
-      prediction, _ = model(input_values)
-      score = prediction.item()
+      # 1. turn on MC dropout
+      enable_mc_dropout(model)
+
+      # 2. run forward pass 5 times
+      mc_predictions = [model(input_values)[0].item() for _ in range(10)]
+
+      # 3. calculate mean and standard deviation
+      score = np.mean(mc_predictions)
+      uncertainty = np.std(mc_predictions)
+
+      # 4. turn model back to standard eval mode, get the heatmap once
+      model.eval()
       raw_heatmap = generate_attention_rollout(model, input_values)
 
     chunk_scores.append(score)
+    chunk_stds.append(uncertainty)
     heatmaps.append(raw_heatmap * score)
+  
+  # calculate final score (mean of top 3)
+  top_3_indices = np.argsort(chunk_scores)[-3:][::-1]
+  final_score = np.mean([chunk_scores[i] for i in top_3_indices]) if chunk_scores else 0.0
 
-  final_score = np.mean(sorted(chunk_scores, reverse=True)[:3]) if chunk_scores else 0.0
+  # calculate final uncertainty (mean of standard deviations from those top 3 chunks)
+  final_std = np.mean([chunk_stds[i] for i in top_3_indices]) if chunk_stds else 0.0
 
   # stitch heatmaps
   full_heatmap = np.concatenate(heatmaps, axis=1) if heatmaps else np.zeros((12, 100))
@@ -201,7 +224,7 @@ def run_full_analysis(file_path, model, feature_extractor):
   heat_b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
   plt.close()
 
-  return final_score, spec_b64, heat_b64, len(audio_full)/sr
+  return final_score, final_std, spec_b64, heat_b64, len(audio_full)/sr
 
 @app.route('/health', methods=['GET'])
 def health():
@@ -228,12 +251,18 @@ def analyze():
       processed_path
     ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-    score, spec_b64, heat_b64, duration = run_full_analysis(processed_path, model, feature_extractor)
+    score, std_dev, spec_b64, heat_b64, duration = run_full_analysis(processed_path, model, feature_extractor)
+
+    # calculate 95% Confidence Interval
+    margin_of_error = 2 * std_dev
+    lower_bound = max(0.0, score - margin_of_error) # clamp to 0
+    upper_bound = min(1.0, score + margin_of_error) # clamp to 1
 
     dist_json = get_distribution_json(score)
 
     return jsonify({
         "adi_score": score,
+        "confidence_interval": [round(lower_bound, 3), round(upper_bound, 3)],
         "biodiversity_score": score,
         "spectrogram_b64": spec_b64,
         "gradcam_b64": heat_b64, # named gradcam just to match Frontend
