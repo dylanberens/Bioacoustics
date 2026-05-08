@@ -522,7 +522,6 @@ function App() {
                       {analysisResult.confidence_interval ? (
                         <>
                           {(analysisResult.confidence_interval[0] * 100).toFixed(1)}
-                          <span style={{ fontSize: 'clamp(2.5rem, 8vw, 5rem)' }}>%</span>
                           <span style={{ margin: '0 10px' }}>-</span>
                           {(analysisResult.confidence_interval[1] * 100).toFixed(1)}
                         </>
@@ -545,7 +544,6 @@ function App() {
                         {analysisResult.confidence_interval ? (
                           <>
                             {(analysisResult.confidence_interval[0] * 100).toFixed(1)}
-                            <span style={{ fontSize: 'clamp(2.5rem, 8vw, 5rem)' }}>%</span>
                             <span style={{ margin: '0 10px' }}>-</span>
                             {(analysisResult.confidence_interval[1] * 100).toFixed(1)}
                           </>
