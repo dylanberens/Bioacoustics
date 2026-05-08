@@ -3,7 +3,13 @@ import io
 import base64
 import subprocess
 import tempfile
+
+# force pytorch to Cloud Run's vCPU limits to prevent thrashing
+os.environ["OMP_NUM_THREADS"] = "4"
+os.environ["MKL_NUM_THREADS"] = "4"
+
 import torch
+torch.set_num_threads(4) # hard limit pytorch's internal threading
 import torch.nn as nn
 import numpy as np
 import librosa
@@ -153,7 +159,7 @@ def run_full_analysis(file_path, model, feature_extractor):
       enable_mc_dropout(model)
 
       # 2. run forward pass 5 times
-      mc_predictions = [model(input_values)[0].item() for _ in range(10)]
+      mc_predictions = [model(input_values)[0].item() for _ in range(5)]
 
       # 3. calculate mean and standard deviation
       score = np.mean(mc_predictions)

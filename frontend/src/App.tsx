@@ -146,18 +146,6 @@ function App() {
     setError('');
   };
 
-
-
-  const getScoreLabel = (score: number) => {
-    if (score >= 0.8) return '[ HIGH BIODIVERSITY DETECTED ]';
-    if (score >= 0.6) return '[ MODERATE BIODIVERSITY DETECTED ]';
-    if (score >= 0.4) return '[ LOW BIODIVERSITY DETECTED ]';
-    if (score >= 0.2) return '[ MINIMAL BIODIVERSITY DETECTED ]';
-    return '[ CRITICAL ECOSYSTEM STATE ]';
-  };
-
-
-
   return (
     <>
     <WavyBackground 
@@ -530,7 +518,17 @@ function App() {
                       fontFamily: 'monospace',
                       position: 'relative'
                     }}>
-                      {(analysisResult.biodiversity_score * 100).toFixed(1)}
+                      {/* added to replace singular score with CI range */}
+                      {analysisResult.confidence_interval ? (
+                        <>
+                          {(analysisResult.confidence_interval[0] * 100).toFixed(1)}
+                          <span style={{ fontSize: 'clamp(2.5rem, 8vw, 5rem)' }}>%</span>
+                          <span style={{ margin: '0 10px' }}>-</span>
+                          {(analysisResult.confidence_interval[1] * 100).toFixed(1)}
+                        </>
+                      ) : (
+                        (analysisResult.biodiversity_score * 100).toFixed(1)
+                      )}
                       <span style={{ fontSize: 'clamp(2.5rem, 8vw, 5rem)' }}>%</span>
                       {/* Neon glow effect */}
                       <div style={{
@@ -543,7 +541,17 @@ function App() {
                         opacity: 0.5,
                         fontFamily: 'monospace'
                       }}>
-                        {(analysisResult.biodiversity_score * 100).toFixed(1)}
+                        {/* added to replace singular score with CI range */}
+                        {analysisResult.confidence_interval ? (
+                          <>
+                            {(analysisResult.confidence_interval[0] * 100).toFixed(1)}
+                            <span style={{ fontSize: 'clamp(2.5rem, 8vw, 5rem)' }}>%</span>
+                            <span style={{ margin: '0 10px' }}>-</span>
+                            {(analysisResult.confidence_interval[1] * 100).toFixed(1)}
+                          </>
+                        ) : (
+                          (analysisResult.biodiversity_score * 100).toFixed(1)
+                        )}
                         <span style={{ fontSize: 'clamp(2.5rem, 8vw, 5rem)' }}>%</span>
                       </div>
                     </div>
@@ -556,25 +564,6 @@ function App() {
                     fontFamily: 'monospace'
                   }}>
                     ADI SCORE: <span style={{ color: '#10B981' }}>{analysisResult.adi_score.toFixed(3)}</span>
-                  </p>
-                  {/* NEW: 95% Confidence Interval */}
-                  {analysisResult.confidence_interval && (
-                    <p style={{
-                      fontSize: 'clamp(0.9rem, 1.8vw, 1.1rem)',
-                      color: '#9CA3AF',
-                      marginTop: '0.25rem',
-                      fontFamily: 'monospace'
-                    }}>
-                      95% CI: [{analysisResult.confidence_interval[0].toFixed(3)} - {analysisResult.confidence_interval[1].toFixed(3)}]
-                      </p>
-                  )}
-                  <p style={{
-                    fontSize: 'clamp(1rem, 2vw, 1.2rem)',
-                    color: '#D1D5DB',
-                    marginTop: '0.5rem',
-                    fontFamily: 'monospace'
-                  }}>
-                    {getScoreLabel(analysisResult.biodiversity_score)}
                   </p>
                 </div>
               </div>
