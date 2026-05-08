@@ -521,9 +521,9 @@ function App() {
                       {/* added to replace singular score with CI range */}
                       {analysisResult.confidence_interval ? (
                         <>
-                          {(analysisResult.confidence_interval[0] * 100).toFixed(1)}
+                          {(analysisResult.confidence_interval[0] * 100).toFixed(0)}
                           <span style={{ margin: '0 10px' }}>-</span>
-                          {(analysisResult.confidence_interval[1] * 100).toFixed(1)}
+                          {(analysisResult.confidence_interval[1] * 100).toFixed(0)}
                         </>
                       ) : (
                         (analysisResult.biodiversity_score * 100).toFixed(1)
@@ -543,9 +543,9 @@ function App() {
                         {/* added to replace singular score with CI range */}
                         {analysisResult.confidence_interval ? (
                           <>
-                            {(analysisResult.confidence_interval[0] * 100).toFixed(1)}
+                            {(analysisResult.confidence_interval[0] * 100).toFixed(0)}
                             <span style={{ margin: '0 10px' }}>-</span>
-                            {(analysisResult.confidence_interval[1] * 100).toFixed(1)}
+                            {(analysisResult.confidence_interval[1] * 100).toFixed(0)}
                           </>
                         ) : (
                           (analysisResult.biodiversity_score * 100).toFixed(1)
