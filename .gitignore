@@ -1,3 +1,9 @@
 *.pth
 checkpoints/
-miccheck.py
+mic_check.py
+edge_logging.py
+edge_inference.py
+run_node.py
+backyard_final_export.csv
+backyard_session.db
+AST_PT_R18_Bioacoustics.ipynb
