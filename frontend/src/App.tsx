@@ -11,9 +11,9 @@ import { GridBackground } from './components/grid-background';
 import { SimpleLoading } from './components/simple-loading';
 import { WavyBackground } from './components/wavy-background';
 import PlotlyDistributionChart from './components/PlotlyDistributionChart';
-import GradCAMHeatmap from './components/GradCAMHeatmap';
 import ColabConnector from './components/ColabConnector';
 import CuteLoadingButton from './components/CuteLoadingButton';
+import MechanisticHeatmap from './components/MechanisticHeatmap';
 
 // Import API service
 import { biodiversityApi } from './services/api';
@@ -779,7 +779,7 @@ function App() {
               </div>
             </div>
 
-            {/* 4. Grad-CAM Heatmap (Matplotlib Image) */}
+            {/* 4. Mechanistic Attention Heatmap (Interactive Overlay) */}
             <div style={{
               width: '100%',
               maxWidth: '1000px',
@@ -805,13 +805,22 @@ function App() {
                   // OUTPUT 4: ATTENTION ROLLOUT HEATMAP
                 </h3>
                 <div style={{ textAlign: 'center' }}>
-                  <GradCAMHeatmap 
-                    heatmapImage={analysisResult.gradcam_image}
-                    biodiversityScore={analysisResult.biodiversity_score}
-                  />
+
+                  {/* ---- WIRING UP MECHINTERP TOGGLES ---- */}
+                  {analysisResult.spectrogram_image && analysisResult.mechanistic_concepts ? (
+                    <MechanisticHeatmap
+                      spectrogramImage={analysisResult.spectrogram_image}
+                      concepts={analysisResult.mechanistic_concepts}
+                    />
+                  ) : (
+                    <div style={{ color: '#9CA3AF', fontFamily: 'monospace' }}>
+                      [WAITING FOR SPATIAL ATTENTION DATA . . .]
+                    </div>
+                  )}
+
+                  </div>
                 </div>
               </div>
-            </div>
 
             {/* System Info */}
             <div style={{
