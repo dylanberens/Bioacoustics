@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 // Interfaces defining the data structure passed from App.tsx
 interface MechanisticConcept {
     probability: number;
-    heatmap: number[][];
+    heatmap_vector: number[][]; // changed: heatmap -> heatmap_vector
 }
 
 interface MechanisticHeatmapProps {
@@ -43,9 +43,10 @@ const MechanisticHeatmap: React.FC<MechanisticHeatmapProps> = ({ spectrogramImag
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         // if no toggle active, leave canvas blank
-        if (activeIndex == null ||!concepts[activeIndex]) return;
+        if (activeIndex === null || !concepts[activeIndex]) return;
 
-        const activeHeatmap = concepts[activeIndex][1].heatmap; // 12x101 grid
+        // fix: heatmap -> heatmap_vector
+        const activeHeatmap = concepts[activeIndex][1].heatmap_vector; // 12x101 grid
         const colorRgb = CONCEPT_COLORS[activeIndex % CONCEPT_COLORS.length];
 
         // calculate dimensions based on 12x101 AST grid config

@@ -22,7 +22,7 @@ import type { BiodiversityAnalysisResult } from './services/api';
 // added new interface for mechinterp
 interface MechanisticConcept {
   probability: number;
-  heatmap: number[][];
+  heatmap_vector: number[][]; // changed: heatmap -> heatmap_vector
 }
 
 interface AnalysisResult extends BiodiversityAnalysisResult {
