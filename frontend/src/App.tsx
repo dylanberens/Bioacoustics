@@ -569,8 +569,6 @@ function App() {
                     ADI SCORE: <span style={{ color: '#10B981' }}>{analysisResult.adi_score.toFixed(3)}</span>
                   </p>
                 </div>
-              </div>
-
               {/* ---> NEW: MECHANISTIC INTERPRETABILITY UI <--- */}
               {analysisResult.mechanistic_concepts && analysisResult.mechanistic_concepts.length > 0 && (
                 <motion.div
@@ -625,6 +623,7 @@ function App() {
                     </div>
                   </motion.div>
               )}
+              </div>
             </div>
 
             {/* 2. Mel Spectrogram (Matplotlib Image) */}
