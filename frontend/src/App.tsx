@@ -19,9 +19,16 @@ import CuteLoadingButton from './components/CuteLoadingButton';
 import { biodiversityApi } from './services/api';
 import type { BiodiversityAnalysisResult } from './services/api';
 
+// added new interface for mechinterp
+interface MechanisticConcept {
+  probability: number;
+  heatmap: number[][];
+}
+
 interface AnalysisResult extends BiodiversityAnalysisResult {
   spectrogram_image?: string; // For backward compatibility with existing components
   gradcam_image?: string; // For backward compatibility with existing components
+  mechanistic_concepts?: Array<[string, MechanisticConcept]>; // added tuple array mapping for mechinterp
 }
 
 function App() {
@@ -314,11 +321,9 @@ function App() {
               padding: '0 1rem'
             }}
           >
-            Use advanced machine learning algorithms to analyze an ecosystem's audio recordings to quantify the biodiversity patterns and acoustic signatures.
+            Use advanced machine learning techniques to analyze an ecosystem's audio recordings to quantify the biodiversity patterns and acoustic signatures.
           </p>
         </motion.div>
-
-
 
         {/* Upload Section */}
         <motion.div
@@ -565,6 +570,61 @@ function App() {
                   </p>
                 </div>
               </div>
+
+              {/* ---> NEW: MECHANISTIC INTERPRETABILITY UI <--- */}
+              {analysisResult.mechanistic_concepts && analysisResult.mechanistic_concepts.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  style={{
+                    marginTop: '2rem',
+                    paddingTop: '2rem',
+                    borderTop: '1px solid rgba(16, 185, 129, 0.3)',
+                    width: '100%'
+                  }}
+                  >
+                    <h4 style={{
+                      color: '#9CA3AF',
+                      fontFamily: 'monospace',
+                      marginBottom: '1.5rem',
+                      fontSize: 'clamp(0.9rem, 2vw, 1.1rem)',
+                      letterSpacing: '0.05em',
+                      textAlign: 'center'
+                    }}>
+                      ACOUSTIC SIGNATURES DETECTED
+                    </h4>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                      gap: '1rem',
+                      width: '100%'
+                    }}>
+                      {analysisResult.mechanistic_concepts.map(([concept, data]) => (
+                        <div key={concept} style={{
+                          background: 'rgba(16, 185, 129, 0.05)',
+                          border: '1px solid rgba(16, 185, 129, 0.2)',
+                          borderRadius: '8px',
+                          padding: '1rem',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          fontFamily: 'monospace'
+                        }}>
+                          <span style={{ color: '#D1D5DB', textTransform: 'uppercase' }}>
+                            {concept.replace('_', ' ')}
+                          </span>
+                          <span style={{
+                            color: data.probability > 0.5 ? '#10B981' : '#9CA3AF',
+                            fontWeight: 'bold'
+                          }}>
+                            {(data.probability * 100).toFixed(1)}%
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+              )}
             </div>
 
             {/* 2. Mel Spectrogram (Matplotlib Image) */}

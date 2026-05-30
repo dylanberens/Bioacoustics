@@ -79,6 +79,54 @@ class BioAcousticAST(nn.Module):
 
     # return dummy None for loss
     return prediction, None
+  
+# === ACTIVATION CACHER CLASS FOR MECHANISTIC INTERPRETABILITY =====
+
+class ActivationCacher:
+  def __init__(self, model, target_layers):
+    self.model = model
+    self.target_layers = target_layers # eg [0, 3, 8] or all 12
+    self.activations = {}
+    self.hooks = []
+    self._register_hooks()
+
+  def _get_activation(self, layer_name):
+    def hook(model, input, output):
+      # check if output is a tuple (extract the tensor) or already a tensor
+      hidden_state = output[0] if isinstance(output, tuple) else output
+
+      # in case it ever drops the batch dimension, force it back
+      if hidden_state.ndim == 2:
+        hidden_state = hidden_state.unsqueeze(0)
+
+      # output is typically a tuple for HF models; first element is hidden state
+      self.activations[layer_name] = hidden_state.detach().cpu()
+    return hook
+
+  def _register_hooks(self):
+    for i in self.target_layers:
+      layer_module = self.model.ast.base_model.encoder.layer[i]
+      hook = layer_module.register_forward_hook(self._get_activation(f'layer_{i}'))
+      self.hooks.append(hook)
+
+  def remove_hooks(self):
+    for hook in self.hooks:
+      hook.remove()
+  
+# ------------------
+
+def isolate_attention_heads(hidden_state, num_heads=12):
+  # hidden_state shape: [batch-size, seq_len, 768]
+  batch_size, seq_len, hidden_size = hidden_state.shape
+  head_dim = hidden_size // num_heads
+
+  # reshape to [batch_size, seq_len, num_heads, head_dim]
+  reshaped = hidden_state.view(batch_size, seq_len, num_heads, head_dim)
+
+  # permute to [batch_size, num_heads, seq_len, head_dim] for easier indexing
+  return reshaped.permute(0, 2, 1, 3)
+
+# ==========================
 
 def generate_attention_rollout(model, input_values):
   with torch.no_grad():
@@ -138,6 +186,94 @@ def enable_mc_dropout(model):
   for m in model.modules():
     if m.__class__.__name__.startswith('Dropout'):
       m.train()
+
+# === MECHANISTIC INTERPRETABILITY EXPANSION ===
+
+def run_mechanistic_inference(audio_path, model, cacher, probes_dict, feature_extractor, top_k=4):
+    # runs audio file thru AST and applies probes for mechanistic interpreability
+
+    # 1. prepare audio
+    audio, _ = librosa.load(audio_path, sr=16000)
+
+    # pad or truncate to exactly 10.24s expected by AST
+    target_len = int(16000 * 10.24)
+    if len(audio) < target_len:
+        audio = np.pad(audio, (0, target_len - len(audio)), mode='constant')
+    else:
+        audio = audio[:target_len]
+
+    # convert to spectrogram features
+    inputs = feature_extractor(audio, sampling_rate=16000, return_tensors="pt")
+    input_values = inputs['input_values'].to(DEVICE)
+
+    # 2. forward pass (catch activations)
+    cacher.activations.clear()
+
+    with torch.no_grad():
+        outputs = model.ast.base_model(input_values, output_attentions=True, return_dict=True)
+
+    all_attentions = outputs.attentions # extract massive tuple of all 12 attention matrices
+    results = {}
+
+    # grid parameters based on ast.config
+    GRID_H = 12
+    GRID_W = 101
+
+    # 3. mechanistic metric & feature space application
+    for concept, probe_data in probes_dict.items():
+        layer_name = probe_data['layer']
+        layer_idx = int(probe_data['layer'].split('_')[1]) # eg 'layer_7' -> 7
+        head_idx = probe_data['head']
+        
+        # load the extracted W and b tensors
+        weight = probe_data['weight'].to(DEVICE) # shape [1, 64]
+        bias = probe_data['bias'].to(DEVICE) # shape [1]
+
+        # extract target features and apply global max pooling reduction
+        raw_acts = cacher.activations[layer_name].to(DEVICE) # [1, 1216, 768]
+        heads = isolate_attention_heads(raw_acts, num_heads=12) # [1, 12, 1216, 64]
+        pooled_head = heads.max(dim=2)[0] # [1, 12, 64]
+
+        # isolate the 64 dimensional feature vector of this head
+        x = pooled_head[0, head_idx, :] # [64]
+
+        # core math: y = sigmoid(W*x + b)
+        # unsqueeze x to do matrix multiplication: [1, 64] @ [64, 1] -> [1, 1] linear algebra dog
+        logit = torch.matmul(weight, x.unsqueeze(1)).squeeze() + bias
+        probability = torch.sigmoid(logit).item()
+
+        # XAI heatmap extraction. shape of single layer attention [Batch, Num_Heads, Seq_Len, Seq_Len]
+        layer_attn = all_attentions[layer_idx]
+
+        # isolate specific head, grab [CLS] token's row (index 0). slice [2:] to ignore [CLS] and [DIST] special tokens
+        cls_attention = layer_attn[0, head_idx, 0, 2:]
+
+        # min max normalization over active frame arrays for frontend rendering
+        attn_min = cls_attention.min()
+        attn_max = cls_attention.max()
+        if attn_max > attn_min:
+          normalized_attn = (cls_attention - attn_min) / (attn_max - attn_min + 1e-8)
+        else:
+          normalized_attn = torch.zeros_like(cls_attention)
+
+        # convert vector map directly to 2D numpy coordinate plane
+        attn_np = normalized_attn.cpu().numpy()
+
+        if attn_np.shape[0] == (GRID_H * GRID_W):
+          heatmap_2d = attn_np.reshape(GRID_H, GRID_W)
+        else:
+          # EH runtime fallback if input dimensions inconsistent
+          fallback_w = attn_np.shape[0] // GRID_H
+          heatmap_2d = attn_np[:GRID_H * fallback_w].reshape(GRID_H, fallback_w)
+
+        results[concept] = {
+            'probability': probability,
+            'heatmap_vector': heatmap_2d.tolist() # format directly to serializable list for API delivery
+            }
+
+    # 4. sort and return the top K findings
+    sorted_results = sorted(results.items(), key=lambda item: item[1]['probability'], reverse=True)
+    return sorted_results[:top_k]
 
 # ===== 3. PREDICTION PIPELINE =====
 def run_full_analysis(file_path, model, feature_extractor):
@@ -259,6 +395,9 @@ def analyze():
 
     score, std_dev, spec_b64, heat_b64, duration = run_full_analysis(processed_path, model, feature_extractor)
 
+    # run mechanistic interpretability
+    top_concepts = run_mechanistic_inference(processed_path, model, cacher, probes_dict, feature_extractor, top_k=4)
+
     # calculate 95% Confidence Interval
     margin_of_error = 2 * std_dev
     lower_bound = max(0.0, score - margin_of_error) # clamp to 0
@@ -273,6 +412,7 @@ def analyze():
         "spectrogram_b64": spec_b64,
         "gradcam_b64": heat_b64, # named gradcam just to match Frontend
         "distribution_data": dist_json,
+        "mechanistic_concepts": top_concepts,
         "duration": round(duration, 2),
         "file_size_mb": round(os.path.getsize(processed_path) / (1024 * 1024), 2), # in MB
         "sample_rate": 16000, #hardcoded model requirement
@@ -321,6 +461,14 @@ download_model(MODEL_URL, CHECKPOINT_PATH)
 # 2. initialize the base float32 architecture
 model = BioAcousticAST(PRETRAINED_MODEL).to(DEVICE)
 
+PROBES_URL = "https://storage.googleapis.com/bioacoustics-models/mechanistic_probes.pt"
+PROBES_PATH = "checkpoints/mechanistic_probes.pt"
+
+download_model(PROBES_URL, PROBES_PATH)
+
+# load to CPU
+probes_dict = torch.load(PROBES_PATH, map_location=DEVICE)
+
 # 3. mutate architecture to accept INT8 weights
 model = torch.quantization.quantize_dynamic(
   model,
@@ -333,6 +481,10 @@ if os.path.exists(CHECKPOINT_PATH):
   model.load_state_dict(torch.load(CHECKPOINT_PATH, map_location=DEVICE))
 
 model.eval()
+
+# initialize global cacher for all 12 layers; attach hooks as final step, after model has been built, quantized, loaded weights
+cacher = ActivationCacher(model, list(range(12)))
+
 print("Quantized INT8 model loaded and ready to go")
 
 if __name__ == '__main__':
