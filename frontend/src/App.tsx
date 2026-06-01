@@ -807,9 +807,10 @@ function App() {
                 <div style={{ textAlign: 'center' }}>
 
                   {/* ---- WIRING UP MECHINTERP TOGGLES ---- */}
-                  {analysisResult.spectrogram_image && analysisResult.mechanistic_concepts ? (
+                  {analysisResult.spectrogram_image && analysisResult.gradcam_image && analysisResult.mechanistic_concepts ? (
                     <MechanisticHeatmap
                       spectrogramImage={analysisResult.spectrogram_image}
+                      gradcamImage={analysisResult.gradcam_image}
                       concepts={analysisResult.mechanistic_concepts}
                     />
                   ) : (

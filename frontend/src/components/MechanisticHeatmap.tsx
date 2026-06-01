@@ -8,6 +8,7 @@ interface MechanisticConcept {
 
 interface MechanisticHeatmapProps {
     spectrogramImage: string;
+    gradcamImage: string; // for default global attention
     concepts: Array<[string, MechanisticConcept]>;
 }
 
@@ -19,8 +20,16 @@ const CONCEPT_COLORS = [
     '245, 158, 11', // construction orange
 ];
 
-const MechanisticHeatmap: React.FC<MechanisticHeatmapProps> = ({ spectrogramImage, concepts }) => {
-    const [activeIndex, setActiveIndex] = useState<number | null>(null);    
+// matplotlib bounding box: represent % of white space created by axes
+const PLOT_MARGINS = {
+    left: 0.058,
+    right: 0.02,
+    top: 0.04,
+    bottom: 0.16
+};
+
+const MechanisticHeatmap: React.FC<MechanisticHeatmapProps> = ({ spectrogramImage, gradcamImage, concepts }) => {
+    const [activeIndex, setActiveIndex] = useState<number | null>(-1);    
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const imageRef = useRef<HTMLImageElement>(null);
 
@@ -49,11 +58,18 @@ const MechanisticHeatmap: React.FC<MechanisticHeatmapProps> = ({ spectrogramImag
         const activeHeatmap = concepts[activeIndex][1].heatmap_vector; // 12x101 grid
         const colorRgb = CONCEPT_COLORS[activeIndex % CONCEPT_COLORS.length];
 
+        // calculate bounding box (inner plot area only)
+        const plotLeft = canvas.width * PLOT_MARGINS.left;
+        const plotTop = canvas.height * PLOT_MARGINS.top;
+        const plotWidth = canvas.width * (1 - PLOT_MARGINS.left - PLOT_MARGINS.right);
+        const plotHeight = canvas.height * (1 - PLOT_MARGINS.top - PLOT_MARGINS.bottom);
+
+
         // calculate dimensions based on 12x101 AST grid config
         const gridRows = 12;
         const gridCols = 101;
-        const blockWidth = canvas.width / gridCols;
-        const blockHeight = canvas.height / gridRows;
+        const blockWidth = plotWidth / gridCols;
+        const blockHeight = plotHeight / gridRows;
 
         // paint the 2d matrix
         for (let row = 0; row < activeHeatmap.length; row++) {
@@ -70,8 +86,8 @@ const MechanisticHeatmap: React.FC<MechanisticHeatmapProps> = ({ spectrogramImag
                     // draw rectangle: x, y, width, height
                     // adding +0.5 prevents microscopic rendering gaps between blocks
                     ctx.fillRect(
-                        col * blockWidth,
-                        row * blockHeight,
+                        plotLeft + (col * blockWidth),
+                        plotTop + (row * blockHeight),
                         blockWidth + 0.5,
                         blockHeight + 0.5
                     );
@@ -94,10 +110,10 @@ const MechanisticHeatmap: React.FC<MechanisticHeatmapProps> = ({ spectrogramImag
                 boxShadow: '0 4px 16px rgba(16, 185, 129, 0.3)'
             }}>
                 
-                {/* Base Spectrogram Image (Bottom Layer) */}
+                {/* dynamically swap base image based on state; attention rollout default */}
                 <img
                     ref={imageRef}
-                    src={spectrogramImage}
+                    src={activeIndex === -1 ? gradcamImage : spectrogramImage}
                     alt="Audio Spectrogram"
                     style={{
                         width: '100%',
@@ -117,7 +133,8 @@ const MechanisticHeatmap: React.FC<MechanisticHeatmapProps> = ({ spectrogramImag
                         width: `calc(100% - 2rem)`,
                         height: `calc(100% - 2rem)`,
                         pointerEvents: 'none', // let mouse clicks pass through to the iamge
-                        borderRadius: '4px'
+                        borderRadius: '4px',
+                        filter: 'blur(6px)'
                     }}
                 />
             </div>
@@ -131,19 +148,19 @@ const MechanisticHeatmap: React.FC<MechanisticHeatmapProps> = ({ spectrogramImag
                 justifyContent: 'center'
             }}>
                 <button
-                    onClick={() => setActiveIndex(null)}
+                    onClick={() => setActiveIndex(-1)}
                     style={{
                         padding: '0.5rem 1rem',
-                        background: activeIndex === null ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                        background: activeIndex === -1 ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
                         border: '1px solid rgba(255, 255, 255, 0.3)',
                         borderRadius: '9999px',
-                        color: activeIndex === null ? 'white' : '#9CA3AF',
+                        color: activeIndex === -1 ? 'white' : '#9CA3AF',
                         fontFamily: 'monospace',
                         cursor: 'pointer',
                         transition: 'all 0.2s'
                     }}
                 >
-                    CLEAR OVERLAY
+                    ATTENTION ROLLOUT
                 </button>
 
                 {concepts.map(([concept, data], index) => {
@@ -171,7 +188,23 @@ const MechanisticHeatmap: React.FC<MechanisticHeatmapProps> = ({ spectrogramImag
                         </button>
                     );
                 })}
-        </div>
+
+                <button
+                    onClick={() => setActiveIndex(null)}
+                    style={{
+                        padding: '0.5rem 1rem',
+                        background: 'transparent',
+                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                        borderRadius: '9999px',
+                        color: activeIndex === null ? '#EF4444' : '#9CA3AF',
+                        fontFamily: 'monospace',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                    }}
+                >
+                    CLEAR
+                </button>
+            </div>
 
         <p style={{
             fontSize: 'clamp(0.8rem, 1.5vw, 1rem)',
@@ -180,7 +213,7 @@ const MechanisticHeatmap: React.FC<MechanisticHeatmapProps> = ({ spectrogramImag
             textAlign: 'center',
             fontFamily: 'monospace'
         }}>
-            Select an acoustic signature to view the model's spatial attention (Mechanistic Interpretability).
+            Mechanistic Interpretability: Select an acoustic signature to view the model's spatial attention
         </p>
 
     </div>
