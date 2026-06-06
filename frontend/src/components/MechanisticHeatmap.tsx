@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 
 // Interfaces defining the data structure passed from App.tsx
 interface MechanisticConcept {
     probability: number;
-    heatmap_vector: number[][]; // changed: heatmap -> heatmap_vector
+    image_b64: string; // CHANGED: replaced heatmap_vector: number[][]
 }
 
 interface MechanisticHeatmapProps {
@@ -20,86 +20,22 @@ const CONCEPT_COLORS = [
     '245, 158, 11', // construction orange
 ];
 
-// matplotlib bounding box: represent % of white space created by axes
-const PLOT_MARGINS = {
-    left: 0.058,
-    right: 0.02,
-    top: 0.04,
-    bottom: 0.16
-};
-
 const MechanisticHeatmap: React.FC<MechanisticHeatmapProps> = ({ spectrogramImage, gradcamImage, concepts }) => {
     const [activeIndex, setActiveIndex] = useState<number | null>(-1);    
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const imageRef = useRef<HTMLImageElement>(null);
 
-    // core drawing engine: runs when active toggle changes
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        const image = imageRef.current;
-
-        if (!canvas || !image) return;
-
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-
-        // sync canvas internal resolution with physical CSS display size
-        // prevents the heatmap from rendering blurry/misaligned
-        canvas.width = image.clientWidth;
-        canvas.height = image.clientHeight;
-
-        // clear previous drawings on canvas
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // if no toggle active, leave canvas blank
-        if (activeIndex === null || !concepts[activeIndex]) return;
-
-        // fix: heatmap -> heatmap_vector
-        const activeHeatmap = concepts[activeIndex][1].heatmap_vector; // 12x101 grid
-        const colorRgb = CONCEPT_COLORS[activeIndex % CONCEPT_COLORS.length];
-
-        // calculate bounding box (inner plot area only)
-        const plotLeft = canvas.width * PLOT_MARGINS.left;
-        const plotTop = canvas.height * PLOT_MARGINS.top;
-        const plotWidth = canvas.width * (1 - PLOT_MARGINS.left - PLOT_MARGINS.right);
-        const plotHeight = canvas.height * (1 - PLOT_MARGINS.top - PLOT_MARGINS.bottom);
-
-
-        // calculate dimensions based on 12x101 AST grid config
-        const gridRows = 12;
-        const gridCols = 101;
-        const blockWidth = plotWidth / gridCols;
-        const blockHeight = plotHeight / gridRows;
-
-        // paint the 2d matrix
-        for (let row = 0; row < activeHeatmap.length; row++) {
-            for (let col = 0; col < activeHeatmap[row].length; col++) {
-                const rawAlpha = activeHeatmap[row][col];
-
-                // only draw if there is actual mathematic attention
-                if (rawAlpha > 0.05) {
-                    // increasing opacity for troubleshooting overlay
-                    const displayAlpha = Math.min(rawAlpha * 2.5, 1.0);
-
-                    ctx.fillStyle = `rgba(${colorRgb}, ${displayAlpha})`;
-
-                    // draw rectangle: x, y, width, height
-                    // adding +0.5 prevents microscopic rendering gaps between blocks
-                    ctx.fillRect(
-                        plotLeft + (col * blockWidth),
-                        plotTop + (row * blockHeight),
-                        blockWidth + 0.5,
-                        blockHeight + 0.5
-                    );
-                }
-            }
-        }
-    }, [activeIndex, concepts, spectrogramImage]);
+    // clean routing logic for display image
+    let displayImage = spectrogramImage;
+    if (activeIndex === -1) {
+        displayImage = gradcamImage; // default global attention
+    } else if (activeIndex !== null && concepts[activeIndex]) {
+        // prepend data URI scheme since python sends raw b64 strings
+        displayImage = `data:image/png;base64,${concepts[activeIndex][1].image_b64}`;
+    }
 
     return (
         <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
 
-            {/* 1. Layered Canvas Sandbox */}
+            {/* 1. Layered Canvas Sandbox -> now just image display */}
             <div style={{
                 position: 'relative',
                 width: '100%',
@@ -112,29 +48,13 @@ const MechanisticHeatmap: React.FC<MechanisticHeatmapProps> = ({ spectrogramImag
                 
                 {/* dynamically swap base image based on state; attention rollout default */}
                 <img
-                    ref={imageRef}
-                    src={activeIndex === -1 ? gradcamImage : spectrogramImage}
-                    alt="Audio Spectrogram"
+                    src={displayImage}
+                    alt="Acoustic Attention Visualization"
                     style={{
                         width: '100%',
                         height: 'auto',
                         borderRadius: '4px',
                         display: 'block'
-                    }}
-                />
-
-                {/* Absolute Overlay Canvas (Top Layer) */}
-                <canvas
-                    ref={canvasRef}
-                    style={{
-                        position: 'absolute',
-                        top: '1rem',    // match the padding of the wrapper
-                        left: '1rem',   // match the padding of the wrapper
-                        width: `calc(100% - 2rem)`,
-                        height: `calc(100% - 2rem)`,
-                        pointerEvents: 'none', // let mouse clicks pass through to the iamge
-                        borderRadius: '4px',
-                        filter: 'blur(6px)'
                     }}
                 />
             </div>

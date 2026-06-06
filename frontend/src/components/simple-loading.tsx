@@ -47,7 +47,7 @@ export const SimpleLoading = () => {
             </h2>
 
             <p style={{ color: '#cccccc', fontSize: '14px' }}>
-                This takes at least 2 minutes using my hotspot, so please do some deep reflecting while waiting.
+                This takes at least 2 minutes using my hotspot, please do some deep reflecting while waiting.
             </p>
         </div>
     );

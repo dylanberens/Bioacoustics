@@ -192,88 +192,153 @@ def enable_mc_dropout(model):
 def run_mechanistic_inference(audio_path, model, cacher, probes_dict, feature_extractor, top_k=4):
     # runs audio file thru AST and applies probes for mechanistic interpreability
 
-    # 1. prepare audio
-    audio, _ = librosa.load(audio_path, sr=16000)
+    audio_full, _ = librosa.load(audio_path, sr=16000, duration=MAX_TOTAL_DURATION_SECONDS)
+    samples_per_chunk = int(SAMPLE_RATE * CHUNK_DURATION)
 
-    # pad or truncate to exactly 10.24s expected by AST
-    target_len = int(16000 * 10.24)
-    if len(audio) < target_len:
-        audio = np.pad(audio, (0, target_len - len(audio)), mode='constant')
-    else:
-        audio = audio[:target_len]
-
-    # convert to spectrogram features
-    inputs = feature_extractor(audio, sampling_rate=16000, return_tensors="pt")
-    input_values = inputs['input_values'].to(DEVICE)
-
-    # 2. forward pass (catch activations)
-    cacher.activations.clear()
-
-    with torch.no_grad():
-        outputs = model.ast.base_model(input_values, output_attentions=True, return_dict=True)
-
-    all_attentions = outputs.attentions # extract massive tuple of all 12 attention matrices
-    results = {}
+    # 1. initialize data tracking for the sliding window
+    concept_data = {concept: {'probs': [], 'heatmaps': []} for concept in probes_dict.keys()}
+    num_chunks = 0
 
     # grid parameters based on ast.config
     GRID_H = 12
     GRID_W = 101
 
-    # 3. mechanistic metric & feature space application
-    for concept, probe_data in probes_dict.items():
-        layer_name = probe_data['layer']
-        layer_idx = int(probe_data['layer'].split('_')[1]) # eg 'layer_7' -> 7
-        head_idx = probe_data['head']
-        
-        # load the extracted W and b tensors
-        weight = probe_data['weight'].to(DEVICE) # shape [1, 64]
-        bias = probe_data['bias'].to(DEVICE) # shape [1]
+    # 2. sliding window over the full audio
+    for start in range(0, len(audio_full) - samples_per_chunk + 1, samples_per_chunk):
+      chunk = audio_full[start : start + samples_per_chunk]
+      inputs = feature_extractor(chunk, sampling_rate=SAMPLE_RATE, return_tensors="pt")
+      input_values = inputs['input_values'].to(DEVICE)
 
-        # extract target features and apply global max pooling reduction
-        raw_acts = cacher.activations[layer_name].to(DEVICE) # [1, 1216, 768]
-        heads = isolate_attention_heads(raw_acts, num_heads=12) # [1, 12, 1216, 64]
-        pooled_head = heads.max(dim=2)[0] # [1, 12, 64]
+      cacher.activations.clear()
 
-        # isolate the 64 dimensional feature vector of this head
-        x = pooled_head[0, head_idx, :] # [64]
+      with torch.no_grad():
+        outputs = model.ast.base_model(input_values, output_attentions=True, return_dict=True)
+      
+      all_attentions = outputs.attentions
+      num_chunks += 1
 
-        # core math: y = sigmoid(W*x + b)
-        # unsqueeze x to do matrix multiplication: [1, 64] @ [64, 1] -> [1, 1] linear algebra dog
-        logit = torch.matmul(weight, x.unsqueeze(1)).squeeze() + bias
-        probability = torch.sigmoid(logit).item()
+      # extract features for all probes for this specific chunk
+      for concept, probe_data in probes_dict.items():
+          layer_name = probe_data['layer']
+          layer_idx = int(probe_data['layer'].split('_')[1]) # eg 'layer_7' -> 7
+          head_idx = probe_data['head']
+          
+          # load the extracted W and b tensors
+          weight = probe_data['weight'].to(DEVICE) # shape [1, 64]
+          bias = probe_data['bias'].to(DEVICE) # shape [1]
 
-        # XAI heatmap extraction. shape of single layer attention [Batch, Num_Heads, Seq_Len, Seq_Len]
-        layer_attn = all_attentions[layer_idx]
+          # extract target features and apply global max pooling reduction
+          raw_acts = cacher.activations[layer_name].to(DEVICE) # [1, 1216, 768]
+          heads = isolate_attention_heads(raw_acts, num_heads=12) # [1, 12, 1216, 64]
+          pooled_head = heads.max(dim=2)[0] # [1, 12, 64]
 
-        # isolate specific head, grab [CLS] token's row (index 0). slice [2:] to ignore [CLS] and [DIST] special tokens
-        cls_attention = layer_attn[0, head_idx, 0, 2:]
+          # isolate the 64 dimensional feature vector of this head
+          x = pooled_head[0, head_idx, :] # [64]
 
-        # min max normalization over active frame arrays for frontend rendering
-        attn_min = cls_attention.min()
-        attn_max = cls_attention.max()
-        if attn_max > attn_min:
-          normalized_attn = (cls_attention - attn_min) / (attn_max - attn_min + 1e-8)
-        else:
-          normalized_attn = torch.zeros_like(cls_attention)
+          # core math: y = sigmoid(W*x + b)
+          # unsqueeze x to do matrix multiplication: [1, 64] @ [64, 1] -> [1, 1] linear algebra dog
+          logit = torch.matmul(weight, x.unsqueeze(1)).squeeze() + bias
+          probability = torch.sigmoid(logit).item()
 
-        # convert vector map directly to 2D numpy coordinate plane
-        attn_np = normalized_attn.cpu().numpy()
+          # XAI heatmap extraction. shape of single layer attention [Batch, Num_Heads, Seq_Len, Seq_Len]
+          layer_attn = all_attentions[layer_idx]
 
-        if attn_np.shape[0] == (GRID_H * GRID_W):
-          heatmap_2d = attn_np.reshape(GRID_H, GRID_W)
-        else:
-          # EH runtime fallback if input dimensions inconsistent
-          fallback_w = attn_np.shape[0] // GRID_H
-          heatmap_2d = attn_np[:GRID_H * fallback_w].reshape(GRID_H, fallback_w)
+          # isolate specific head, grab [CLS] token's row (index 0). slice [2:] to ignore [CLS] and [DIST] special tokens
+          cls_attention = layer_attn[0, head_idx, 0, 2:]
 
-        results[concept] = {
-            'probability': probability,
-            'heatmap_vector': heatmap_2d.tolist() # format directly to serializable list for API delivery
-            }
+          # min max normalization over active frame arrays for frontend rendering
+          attn_min = cls_attention.min()
+          attn_max = cls_attention.max()
+          if attn_max > attn_min:
+            normalized_attn = (cls_attention - attn_min) / (attn_max - attn_min + 1e-8)
+          else:
+            normalized_attn = torch.zeros_like(cls_attention)
 
-    # 4. sort and return the top K findings
-    sorted_results = sorted(results.items(), key=lambda item: item[1]['probability'], reverse=True)
-    return sorted_results[:top_k]
+          # convert vector map directly to 2D numpy coordinate plane
+          attn_np = normalized_attn.cpu().numpy()
+
+          if attn_np.shape[0] == (GRID_H * GRID_W):
+            heatmap_2d = attn_np.reshape(GRID_H, GRID_W)
+          else:
+            # EH runtime fallback if input dimensions inconsistent
+            fallback_w = attn_np.shape[0] // GRID_H
+            heatmap_2d = attn_np[:GRID_H * fallback_w].reshape(GRID_H, fallback_w)
+          
+          # store chunk results
+          concept_data[concept]['probs'].append(probability)
+          concept_data[concept]['heatmaps'].append(heatmap_2d)
+      
+    # 3, aggregate results across chunks
+    aggregated_results = {}
+    for concept, data in concept_data.items():
+      # taking max probability across 50s file to detect if event occurred at all
+      max_prob = max(data['probs']) if data['probs'] else 0.0
+
+      # stitched heatmaps horizontally across time
+      stitched_heatmap = np.concatenate(data['heatmaps'], axis=1) if data['heatmaps'] else np.zeros((12, 100))
+      aggregated_results[concept] = {
+        'probability': max_prob,
+        'full_heatmap': stitched_heatmap
+      }
+    
+    # 4. sort and isolate top K concepts
+    sorted_results = sorted(aggregated_results.items(), key=lambda item: item[1]['probability'], reverse=True)[:top_k]
+
+    # 5. generate matplotlib overlays for the top K
+    # calculate base spectrogram once to serve as the structural anchor
+    spec = librosa.feature.melspectrogram(y=audio_full, sr=SAMPLE_RATE, fmax=8000)
+    spec_db = librosa.power_to_db(spec, ref=np.max)
+
+    actual_audio_duration = len(audio_full) / SAMPLE_RATE
+    heatmap_duration = num_chunks * CHUNK_DURATION
+    frames_to_keep = int(spec_db.shape[1] * (heatmap_duration / actual_audio_duration))
+
+    # built in matploylib colormaps for modern tech style
+    tech_cmaps = ['Greens', 'cool', 'Wistia', 'spring']
+
+    final_concepts = []
+
+    for idx, (concept, data) in enumerate(sorted_results):
+      fig, ax = plt.subplots(figsize=(12, 3))
+
+      # A. grayscale base spectrogram for readability
+      librosa.display.specshow(spec_db, sr=SAMPLE_RATE, x_axis='time', y_axis='mel', fmax=8000, ax=ax, cmap='gray', zorder=1)
+      ax.set_xlim(0, heatmap_duration)
+
+      # B. resize stitched heatmap to fir specific mel frames
+      heatmap_resized = cv2.resize(data['full_heatmap'], (frames_to_keep, spec_db.shape[0]))
+
+      # masking: replace low attention areas with NaN. matplotlib natively renders NaN as transparent
+      heatmap_masked = np.where(heatmap_resized > 0.05, heatmap_resized, np.nan)
+
+      # C. select built in colormap
+      selected_cmap = tech_cmaps[idx % len(tech_cmaps)]
+
+      # D. overlay masked mathematical attention natively
+      librosa.display.specshow(
+        heatmap_masked,
+        sr=SAMPLE_RATE,
+        x_axis='time',
+        y_axis='mel',
+        fmax=8000,
+        ax=ax,
+        cmap=selected_cmap,
+        alpha=0.85, # slight transparency to allow underlying spectrograms visibility
+        zorder=10
+      )
+
+      buf = io.BytesIO()
+      plt.savefig(buf, format='png', bbox_inches='tight')
+      img_b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+      plt.close(fig)
+
+      # package result as frontend tuple map loop expects
+      final_concepts.append([concept, {
+        'probability': data['probability'],
+        'image_b64': img_b64
+      }])
+
+    return final_concepts
 
 # ===== 3. PREDICTION PIPELINE =====
 def run_full_analysis(file_path, model, feature_extractor):
