@@ -78,8 +78,8 @@ const MechanisticHeatmap: React.FC<MechanisticHeatmapProps> = ({ spectrogramImag
 
                 // only draw if there is actual mathematic attention
                 if (rawAlpha > 0.05) {
-                    // cap opacity at 0.75 so underlying audio visual isn't completely hidden
-                    const displayAlpha = rawAlpha * 0.75;
+                    // increasing opacity for troubleshooting overlay
+                    const displayAlpha = Math.min(rawAlpha * 2.5, 1.0);
 
                     ctx.fillStyle = `rgba(${colorRgb}, ${displayAlpha})`;
 
