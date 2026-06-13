@@ -76,7 +76,6 @@ We implemented Attention Rollout Heatmaps for model interpretability, to be able
 *(It's worth noting early versions of this project resulted in attention heatmaps with broad regions colored; the sparse, targeted marks on our current attention rollout heatmaps are indicative of a confident model that knows where to look to assess biodiversity, which aligns with the 0.95 R² of our final AST model.)*
 
 ### Mechanistic Interpretability (Linear Probe Based Unsupervised Labeling)
-![Mechanistic Heatmaps](assets/mechanistic_interpretability.png)
 
 To overcome the limitation of an incompletely labeled dataset, we inspected the model's latent space to determine if it learned to disentangle complex audio features (biophony vs. anthrophony vs. geophony) naturally through the process of training to predict regression scores. The initial training was framed as a regression task (predicting R-ADI score), forcing the model to learn a highly structured physical representation of the soundscape. 
 
@@ -84,6 +83,10 @@ To overcome the limitation of an incompletely labeled dataset, we inspected the 
 * **Latent Space Auditing:** We processed an entirely unseen environmental audio dataset (ESC-50) through the frozen model, allowing us to see how the model's internal circuitry responds to known, labeled acoustic features (e.g., chainsaw, drops of water, bird calls).
 * **Linear Probing:** We trained 15 single-layer logistic regression probes on the cached activations to identify which specific layers and attention heads learned to differentiate these discrete acoustic concepts.
 * **Identifying Polysemanticity:** This audit revealed "feature entanglement"— instances where the model superimposed unrelated concepts into the exact same neural circuit. Most notably, Layer 7 / Head 9 was the strongest predictor of both the 'Insects' class (f1: 0.904) and the 'Engine' class (f1: 0.9111). This superposition proves the model did not learn a clear decision boundary between complex biophony and mechanical anthrophony, directly informing our dataset expansion strategy.
+
+![Mechanistic Heatmaps](assets/mechanistic_interpretability.png)
+
+*(Attention Rollout heatmaps from Amazon Rainforest audio: green = frogs, blue = chirping birds, purple = crickets)*
 
 ---
 

@@ -18,6 +18,7 @@ import cv2
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from transformers import ASTConfig, ASTForAudioClassification, ASTFeatureExtractor
@@ -192,7 +193,7 @@ def enable_mc_dropout(model):
 def run_mechanistic_inference(audio_path, model, cacher, probes_dict, feature_extractor, top_k=4):
     # runs audio file thru AST and applies probes for mechanistic interpreability
 
-    audio_full, _ = librosa.load(audio_path, sr=16000, duration=MAX_TOTAL_DURATION_SECONDS)
+    audio_full, _ = librosa.load(audio_path, sr=SAMPLE_RATE, duration=MAX_TOTAL_DURATION_SECONDS)
     samples_per_chunk = int(SAMPLE_RATE * CHUNK_DURATION)
 
     # 1. initialize data tracking for the sliding window
@@ -293,8 +294,13 @@ def run_mechanistic_inference(audio_path, model, cacher, probes_dict, feature_ex
     heatmap_duration = num_chunks * CHUNK_DURATION
     frames_to_keep = int(spec_db.shape[1] * (heatmap_duration / actual_audio_duration))
 
-    # built in matploylib colormaps for modern tech style
-    tech_cmaps = ['Greens', 'cool', 'Wistia', 'spring']
+    # pure neon RGBs to fit dark/neon/matrix ui
+    neon_colors = [
+      (16/255, 185/255, 129/255), # matrix green
+      (239/255, 68/255, 68/255), # laser red
+      (6/255, 182/255, 212/255), # cyber cyan
+      (168/255, 85/255, 247/255), # neon purple
+    ]
 
     final_concepts = []
 
@@ -311,8 +317,21 @@ def run_mechanistic_inference(audio_path, model, cacher, probes_dict, feature_ex
       # masking: replace low attention areas with NaN. matplotlib natively renders NaN as transparent
       heatmap_masked = np.where(heatmap_resized > 0.05, heatmap_resized, np.nan)
 
-      # C. select built in colormap
-      selected_cmap = tech_cmaps[idx % len(tech_cmaps)]
+      # C. dynamically build a 3 stop gradient to visualize degree of intensity
+      base_c = neon_colors[idx % len(neon_colors)]
+
+      # create a darker and brighter version of the base RGB
+      dark_c = (base_c[0] * 0.5, base_c[1] * 0.5, base_c[2] * 0.5)
+      bright_c = (min(base_c[0] * 1.2, 1.0), min(base_c[1] * 1.2, 1.0), min(base_c[2] * 1.2, 1.0))
+
+      custom_cmap = LinearSegmentedColormap.from_list(
+        'pure_neon_heat',
+        [
+            (dark_c[0], dark_c[1], dark_c[2], 0.35), # low attention: dark and semi transparent
+            (base_c[0], base_c[1], base_c[2], 0.70), # mid attention: base color, deeper alpha for better visual
+            (bright_c[0], bright_c[1], bright_c[2], 0.97), # high attention: full and vibrant
+        ]
+      )
 
       # D. overlay masked mathematical attention natively
       librosa.display.specshow(
@@ -322,8 +341,9 @@ def run_mechanistic_inference(audio_path, model, cacher, probes_dict, feature_ex
         y_axis='mel',
         fmax=8000,
         ax=ax,
-        cmap=selected_cmap,
-        alpha=0.85, # slight transparency to allow underlying spectrograms visibility
+        cmap=custom_cmap,
+        vmin=0.05, # lock bottom of scale
+        vmax=1.0, # lock top of scale
         zorder=10
       )
 
@@ -398,7 +418,7 @@ def run_full_analysis(file_path, model, feature_extractor):
   buf = io.BytesIO()
   plt.savefig(buf, format='png', bbox_inches='tight')
   spec_b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
-  plt.close()
+  plt.close(fig)
 
   # 2. heatmap overlay
   fig, ax = plt.subplots(figsize=(12, 3))
@@ -429,7 +449,7 @@ def run_full_analysis(file_path, model, feature_extractor):
   buf = io.BytesIO()
   plt.savefig(buf, format='png', bbox_inches='tight')
   heat_b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
-  plt.close()
+  plt.close(fig)
 
   return final_score, final_std, spec_b64, heat_b64, len(audio_full)/sr
 
